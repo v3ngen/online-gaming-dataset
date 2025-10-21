@@ -773,7 +773,7 @@ class DatasetGenerator:
                                                          'engagement_score', 'expertise_score'])
 
     def get_dataset(self) -> pd.DataFrame:
-        """Return the generated dataset with columns in correct order"""
+        """Return the generated dataset with columns in correct order, sorted by PlayerID"""
         column_order = [
             # Player-level attributes (fixed across all games)
             'PlayerID', 'Age', 'Gender', 'Location',
@@ -788,7 +788,9 @@ class DatasetGenerator:
             'SpendingPropensity', 'PlayerExpertise'
         ]
 
-        return self.dataset_df[column_order]
+        # Sort by PlayerID for easy visual verification of player consistency
+        # Multi-game players will have consecutive rows
+        return self.dataset_df[column_order].sort_values('PlayerID').reset_index(drop=True)
 
 
 # ============================================================================
