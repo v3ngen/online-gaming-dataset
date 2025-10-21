@@ -3,7 +3,13 @@
 ## Overview
 This document captures the detailed requirements and specifications for generating the coherent online gaming behavior dataset.
 
-**Target Size**: ~10,000 player records
+**Target Size**: ~10,000 player-game combinations (before data quality issues)
+**Final Size**: ~10,050 rows (after adding duplicates)
+
+**NOTE**: This dataset intentionally includes data quality issues for teaching data cleaning:
+- Duplicate rows (~0.37%, ~37 rows)
+- Age anomalies - typo-style errors (~0.73%, ~73 rows, capped at age 199)
+- Missing values (both feature-level and row-level)
 
 ---
 
@@ -391,3 +397,63 @@ _This section will capture key decisions and rationale as we discuss_
       - All spending normalized to GBP for consistency across global regions
     - Added DaysPlayed for tenure/commitment tracking
     - Students can aggregate by player (count games, sum spending, identify genre preferences)
+
+---
+
+## Data Quality Issues (Intentional for Teaching)
+
+The dataset intentionally includes realistic data quality issues to teach data cleaning:
+
+### 1. Duplicate Rows (~0.37%, ~37 rows)
+- **What**: Exact duplicates of existing rows
+- **Why**: Simulates data ingestion errors, ETL pipeline issues
+- **Detection**: `df.duplicated()`
+- **Cleaning**: `df.drop_duplicates()`
+
+### 2. Age Anomalies (~0.73%, ~73 rows)
+- **What**: Typo-style errors in user-entered age field
+- **Examples**:
+  - 166 instead of 16 (double-typed last digit 6)
+  - 255 instead of 25 (double-typed last digit 5) - Note: capped at 199
+  - 344 instead of 34 (double-typed last digit 4) - Note: capped at 199
+- **Why**: Age is user-entered during registration, prone to typos
+- **Range**: Anomalous ages are capped at maximum 199 (more realistic than 500+)
+- **Detection**: Check ages outside normal range (13-65): `df[(df['Age'] > 100) | (df['Age'] < 13)]`
+- **Cleaning**: Fix by removing doubled digit (e.g., 166 → 16)
+
+**Note**: Only Age has anomalies because it's the only user-entered field. Other metrics (PlayTimeHours, PlayerLevel, etc.) are system-tracked and won't have typos.
+
+### 3. Missing Values
+
+#### Feature-Level Missing (Systematic)
+- **AvgSessionDurationMinutes**: ~8% missing (session tracking failures)
+- **AchievementsUnlocked**: ~6% missing (data sync issues)
+
+#### Row-Level Missing (Random Incomplete Records)
+- **What**: 5-10 rows with 4-6 missing values each
+- **Why**: Simulates incomplete data uploads, corrupted records
+- **Affected fields**: Age, Gender, Location, GameGenre, GameDifficulty, PlayTimeHours, SessionsPerWeek, AvgSessionDurationMinutes, PlayerLevel, AchievementsUnlocked, EngagementLevel, DaysPlayed, PurchaseCount, TotalSpend, AvgPurchasesPerMonth, AvgPurchaseValue
+
+#### Immune Fields (NEVER Missing)
+These fields are guaranteed to have NO missing values:
+- **PlayerID**: Primary key
+- **GameID**: Foreign key
+- **GameName**: Derived from GameID
+- **PlayerExpertise**: Target variable (needed for ML)
+- **SpendingPropensity**: Target variable (needed for ML)
+
+### Cleaning Recommendations for Students
+
+1. **Duplicates**: Remove all but first occurrence
+2. **Age Anomalies**: Apply typo correction logic
+3. **Missing Values**:
+   - Drop rows with 4+ missing values (incomplete records)
+   - Impute remaining missing values:
+     - Numerical: Median imputation
+     - Categorical: Mode imputation
+   - Alternative: Use algorithms that handle missing data (e.g., Random Forest)
+
+### Impact on ML
+- Students should clean data BEFORE training ML models
+- Can compare model performance on clean vs dirty data
+- Learn importance of data quality for ML accuracy

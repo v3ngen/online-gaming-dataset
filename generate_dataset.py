@@ -794,6 +794,113 @@ class DatasetGenerator:
 
 
 # ============================================================================
+# DATA QUALITY ISSUES (FOR TEACHING PURPOSES)
+# ============================================================================
+
+def introduce_data_quality_issues(df: pd.DataFrame, random_seed: int = 42) -> pd.DataFrame:
+    """
+    Introduce realistic data quality issues for teaching data cleaning:
+    1. Duplicate rows (~0.5%)
+    2. Age anomalies - typo-style errors in user-entered field (~1%)
+    3. Missing values - both feature-level and row-level
+
+    Immune fields (no missing values): PlayerID, GameID, GameName,
+                                       PlayerExpertise, SpendingPropensity
+    """
+    np.random.seed(random_seed)
+    df_dirty = df.copy()
+
+    print("\n=== Introducing Data Quality Issues (for teaching) ===")
+
+    # 1. DUPLICATES (~0.37%, ~37 rows for 10k dataset)
+    # Using a non-round percentage to make it less "clean"
+    n_duplicates = int(len(df) * 0.0037)
+    duplicate_indices = np.random.choice(df.index, size=n_duplicates, replace=False)
+    duplicates = df.iloc[duplicate_indices].copy()
+    df_dirty = pd.concat([df_dirty, duplicates], ignore_index=True)
+    print(f"✓ Added {n_duplicates} duplicate rows")
+
+    # 2. AGE ANOMALIES - Typo-style errors (~0.73%)
+    # These simulate double-typed digits in user registration forms
+    # Using non-round percentage and capping max age at 199
+    n_age_anomalies = int(len(df_dirty) * 0.0073)
+    age_anomaly_indices = np.random.choice(df_dirty.index, size=n_age_anomalies, replace=False)
+
+    typo_patterns = [
+        (16, 166), (25, 255), (34, 344), (28, 288),
+        (19, 199), (22, 222), (33, 333), (45, 455),
+        (18, 188), (27, 277), (29, 299), (31, 311),
+        (24, 244), (26, 266), (32, 322), (35, 355),
+        (38, 388), (41, 411), (44, 444), (48, 488)
+    ]
+
+    for idx in age_anomaly_indices:
+        current_age = df_dirty.loc[idx, 'Age']
+        # Find a matching pattern or create double-digit typo
+        matching_patterns = [p for p in typo_patterns if abs(p[0] - current_age) <= 5 and p[1] <= 199]
+        if matching_patterns:
+            _, typo_value = matching_patterns[0]
+        else:
+            # Create a double-digit typo from last digit, capped at 199
+            last_digit = current_age % 10
+            typo_value = min(current_age * 10 + last_digit, 199)
+
+        # Final safety check: don't exceed 199
+        if typo_value > 199:
+            # Use first two digits doubled instead
+            first_digit = int(str(current_age)[0])
+            typo_value = int(str(first_digit) + str(first_digit) + str(current_age)[-1])
+            if typo_value > 199:
+                typo_value = 199
+
+        df_dirty.loc[idx, 'Age'] = typo_value
+
+    print(f"✓ Added {n_age_anomalies} age anomalies (typo-style double-digit errors, max 199)")
+
+    # 3. MISSING VALUES - Feature-level
+    # AvgSessionDurationMinutes: 8% missing (session tracking failures)
+    n_missing_session = int(len(df_dirty) * 0.08)
+    session_missing_indices = np.random.choice(df_dirty.index, size=n_missing_session, replace=False)
+    df_dirty.loc[session_missing_indices, 'AvgSessionDurationMinutes'] = np.nan
+    print(f"✓ Added {n_missing_session} missing values to AvgSessionDurationMinutes (8%)")
+
+    # AchievementsUnlocked: 6% missing (data sync issues)
+    n_missing_achieve = int(len(df_dirty) * 0.06)
+    achieve_missing_indices = np.random.choice(df_dirty.index, size=n_missing_achieve, replace=False)
+    df_dirty.loc[achieve_missing_indices, 'AchievementsUnlocked'] = np.nan
+    print(f"✓ Added {n_missing_achieve} missing values to AchievementsUnlocked (6%)")
+
+    # 4. MISSING VALUES - Row-level (incomplete records)
+    # 5-10 rows with multiple missing values each (4-6 fields per row)
+    n_incomplete_rows = np.random.randint(5, 11)
+    incomplete_row_indices = np.random.choice(df_dirty.index, size=n_incomplete_rows, replace=False)
+
+    # Fields that can have missing values (exclude immune fields)
+    nullable_fields = ['Age', 'Gender', 'Location', 'GameGenre', 'GameDifficulty',
+                      'PlayTimeHours', 'SessionsPerWeek', 'AvgSessionDurationMinutes',
+                      'PlayerLevel', 'AchievementsUnlocked', 'EngagementLevel',
+                      'DaysPlayed', 'PurchaseCount', 'TotalSpend',
+                      'AvgPurchasesPerMonth', 'AvgPurchaseValue']
+
+    for idx in incomplete_row_indices:
+        n_fields_missing = np.random.randint(4, 7)
+        fields_to_null = np.random.choice(nullable_fields, size=n_fields_missing, replace=False)
+        df_dirty.loc[idx, fields_to_null] = np.nan
+
+    print(f"✓ Added {n_incomplete_rows} incomplete rows (each with 4-6 missing values)")
+
+    # Re-sort by PlayerID to maintain order
+    df_dirty = df_dirty.sort_values('PlayerID').reset_index(drop=True)
+
+    print(f"\n=== Data Quality Summary ===")
+    print(f"Final dataset size: {len(df_dirty)} rows (original: {len(df)})")
+    print(f"Total missing values: {df_dirty.isnull().sum().sum()}")
+    print(f"Columns with missing values: {(df_dirty.isnull().sum() > 0).sum()}")
+
+    return df_dirty
+
+
+# ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
@@ -816,6 +923,9 @@ def main():
     generator = DatasetGenerator(config)
     dataset = generator.generate()
     final_dataset = generator.get_dataset()
+
+    # Introduce data quality issues for teaching purposes
+    final_dataset = introduce_data_quality_issues(final_dataset, random_seed=config.random_seed)
 
     # Save to CSV
     final_dataset.to_csv(args.output, index=False)

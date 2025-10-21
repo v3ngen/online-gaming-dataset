@@ -29,12 +29,69 @@ class DatasetValidator:
         self.issues = []
         self.warnings = []
 
+    def check_data_quality_issues(self):
+        """Report data quality issues intentionally added for teaching purposes"""
+        print("\n[0] DATA QUALITY ASSESSMENT (Teaching Issues)")
+        print("-" * 70)
+        print("NOTE: These issues are intentionally added for teaching data cleaning\n")
+
+        # 1. Duplicates
+        n_duplicates = self.df.duplicated().sum()
+        if n_duplicates > 0:
+            print(f"📊 DUPLICATES: {n_duplicates} duplicate rows found")
+            duplicate_rows = self.df[self.df.duplicated(keep=False)]
+            print(f"   Total rows involved in duplicates: {len(duplicate_rows)}")
+        else:
+            print(f"✓ No duplicates found")
+
+        # 2. Age Anomalies (typo-style errors)
+        age_anomalies = self.df[(self.df['Age'] > 100) | (self.df['Age'] < 13)]
+        if len(age_anomalies) > 0:
+            print(f"\n📊 AGE ANOMALIES: {len(age_anomalies)} ages outside normal range (13-65)")
+            sample_ages = sorted(age_anomalies['Age'].dropna().unique())[:10]
+            print(f"   Sample anomalous ages: {sample_ages}")
+            print(f"   These simulate typo errors (e.g., 166 instead of 16)")
+        else:
+            print(f"\n✓ No age anomalies found")
+
+        # 3. Missing Value Summary
+        missing = self.df.isnull().sum()
+        total_missing = missing.sum()
+        print(f"\n📊 MISSING VALUES: {total_missing} total missing values")
+
+        if total_missing > 0:
+            # Feature-level missing
+            print(f"   Columns with missing values:")
+            for col in missing[missing > 0].sort_values(ascending=False).head(10).index:
+                pct = (missing[col] / len(self.df)) * 100
+                print(f"     - {col}: {missing[col]} ({pct:.1f}%)")
+
+            # Row-level missing
+            rows_with_many_missing = self.df[self.df.isnull().sum(axis=1) >= 4]
+            if len(rows_with_many_missing) > 0:
+                print(f"\n   Incomplete records (4+ missing values): {len(rows_with_many_missing)} rows")
+
+        # 4. Immune fields verification
+        print(f"\n📊 IMMUNE FIELDS (should have NO missing values):")
+        immune_fields = ['PlayerID', 'GameID', 'GameName', 'PlayerExpertise', 'SpendingPropensity']
+        all_immune_clean = True
+        for field in immune_fields:
+            n_missing = self.df[field].isnull().sum()
+            status = '✓' if n_missing == 0 else '✗'
+            print(f"   {status} {field}: {n_missing} missing")
+            if n_missing > 0:
+                all_immune_clean = False
+
+        if all_immune_clean:
+            print(f"\n✓ All immune fields are clean")
+
     def validate_all(self):
         """Run all validation checks"""
         print("="*70)
         print("DATASET VALIDATION REPORT")
         print("="*70)
 
+        self.check_data_quality_issues()  # New: Check for teaching-purpose issues
         self.check_missing_values()
         self.check_data_types()
         self.check_value_ranges()
@@ -46,7 +103,7 @@ class DatasetValidator:
         self.print_summary()
 
     def check_missing_values(self):
-        """Check for missing values"""
+        """Check for missing values - NOTE: Missing values are intentional for teaching"""
         print("\n[1] MISSING VALUES CHECK")
         print("-" * 70)
 
@@ -54,9 +111,9 @@ class DatasetValidator:
         if missing.sum() == 0:
             print("✓ No missing values found")
         else:
-            print("✗ Missing values detected:")
+            print("ℹ️  Missing values present (intentional for teaching):")
             print(missing[missing > 0])
-            self.issues.append("Missing values detected")
+            # Don't add to issues - these are intentional
 
     def check_data_types(self):
         """Check data types are correct"""
