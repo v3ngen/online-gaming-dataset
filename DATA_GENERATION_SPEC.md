@@ -44,13 +44,14 @@ We have **TWO** target variables to provide students with different ML learning 
 - **Design Goal**: Realistic business problem with clear but non-trivial patterns
 
 **Contributing Factors**:
-1. **PurchaseCount & TotalSpendUSD** - Core metrics (NonSpender: $0, Occasional: $1-100, Whale: $100+)
+1. **PurchaseCount & TotalSpend** - Core metrics (NonSpender: £0, Occasional: £1-80, Whale: £80+)
 2. **EngagementLevel** - High engagement → more spending likelihood
 3. **PlayTimeHours** - Invested time → invested money (sunk cost fallacy)
 4. **DaysPlayed** - Longer-term commitment → more spending
-5. **GameGenre** - Some genres monetize better (e.g., RPG/Strategy > Sports)
-6. **Age** - Disposable income patterns (older players may spend more)
-7. **AchievementsUnlocked** - Completionists spend more to unlock content
+5. **GameGenre** - RPG (esp. MMORPG) and competitive Action spend most; Strategy medium
+6. **Specific Games** - RPG_003 and ACT_001 have highest whale rates
+7. **Age** - Disposable income patterns (older players may spend more)
+8. **AchievementsUnlocked** - Completionists spend more to unlock content
 
 ---
 
@@ -64,7 +65,9 @@ We have **TWO** target variables to provide students with different ML learning 
 
 **Estimated Row Count**: ~10,000 rows representing player-game combinations
 
-### Feature List
+### Feature List (20 features total)
+
+**Note**: Features are numbered for reference but may appear in any order in the final dataset.
 
 #### Identifiers
 1. **PlayerID** - Unique player identifier (will repeat for players playing multiple games)
@@ -76,7 +79,7 @@ We have **TWO** target variables to provide students with different ML learning 
 5. **Location** - Geographic region {USA, Europe, Asia, Other}
 
 #### Game Context
-6. **GameGenre** - Type of game {Action, RPG, Strategy, Sports, Simulation}
+6. **GameGenre** - Type of game {RPG, Action, Strategy}
 7. **GameDifficulty** - Difficulty setting chosen by player {Easy, Medium, Hard}
 
 #### Behavioral Metrics (Player-Game specific)
@@ -91,13 +94,120 @@ We have **TWO** target variables to provide students with different ML learning 
 14. **DaysPlayed** - Number of days player has been active in this game (integer)
 
 #### Spending Behavior
-15. **PurchaseCount** - Number of in-game purchases made in this game (integer, 0+)
-16. **TotalSpend** - Total amount spent in this game (float, USD, 0+)
-17. **AvgSessionSpend** - Average spend per session (float, derived or standalone)
+15. **PurchaseCount** - Total count of in-game purchases made in this game (integer, 0+)
+16. **TotalSpend** - Total amount spent in this game (float, GBP, 0+)
+   - All spending normalized to GBP for consistency across regions
+17. **AvgPurchasesPerMonth** - Average purchase frequency per month (float, PurchaseCount / (DaysPlayed / 30))
+   - Captures spending cadence (e.g., 2 purchases/month vs 0.1 purchases/month)
+18. **AvgPurchaseValue** - Average value per purchase (float, TotalSpend / PurchaseCount, £0 if no purchases)
+   - Distinguishes spending patterns: high frequency/low value vs low frequency/high value
 
 #### Target Variables (ML Prediction)
-18. **PlayerExpertise** - Expertise level {Beginner, Intermediate, Expert}
-19. **SpendingPropensity** - Spending behavior category {NonSpender, Occasional, Whale}
+19. **PlayerExpertise** - Expertise level {Beginner, Intermediate, Expert}
+20. **SpendingPropensity** - Spending behavior category {NonSpender, Occasional, Whale}
+
+### Game Catalog
+
+**Total Games**: 11 games across 3 genres
+
+#### RPG Genre (4 games)
+- **RPG_001**: "Dragon's Quest" - High fantasy RPG
+  - Max Level: 100
+  - Max Achievements: 120
+  - Typical playtime: 200-800 hours
+  - Monetization: High (cosmetics, expansions, convenience items)
+
+- **RPG_002**: "Eternal Legends" - Story-driven JRPG
+  - Max Level: 99
+  - Max Achievements: 95
+  - Typical playtime: 100-500 hours
+  - Monetization: Medium-High (character packs, story DLC)
+
+- **RPG_003**: "Mystic Realms Online" - MMORPG
+  - Max Level: 80
+  - Max Achievements: 150
+  - Typical playtime: 300-2000+ hours
+  - Monetization: Very High (subscriptions, cosmetics, pay-to-progress)
+
+- **RPG_004**: "Dungeon Crawler Deluxe" - Action RPG
+  - Max Level: 75
+  - Max Achievements: 85
+  - Typical playtime: 50-300 hours
+  - Monetization: Medium (cosmetics, seasonal content)
+
+**RPG Genre Patterns**:
+- High playtime overall
+- High achievement focus (completionists)
+- Strong monetization (especially RPG_003)
+- Older demographic bias (25-45 years)
+- High engagement levels
+- Players often play multiple RPG games
+
+#### Action Genre (4 games)
+- **ACT_001**: "Battle Royale Extreme" - Competitive shooter
+  - Max Level: 100
+  - Max Achievements: 110
+  - Typical playtime: 100-1000 hours
+  - Monetization: High (battle passes, skins, weapons)
+
+- **ACT_002**: "Zombie Apocalypse" - Co-op survival
+  - Max Level: 50
+  - Max Achievements: 75
+  - Typical playtime: 30-200 hours
+  - Monetization: Low-Medium (DLC packs)
+
+- **ACT_003**: "Street Fighter Ultimate" - Fighting game
+  - Max Level: 60
+  - Max Achievements: 90
+  - Typical playtime: 50-500 hours
+  - Monetization: Medium (character DLC, cosmetics)
+
+- **ACT_004**: "Ninja Warriors" - Platformer/Action
+  - Max Level: 40
+  - Max Achievements: 60
+  - Typical playtime: 20-100 hours
+  - Monetization: Low (mostly paid game, minimal microtransactions)
+
+**Action Genre Patterns**:
+- Varied playtime (wide range)
+- Younger demographic bias (16-35 years)
+- Mixed monetization (ACT_001 high, ACT_004 low)
+- Shorter session durations, higher frequency
+- Difficulty varies widely
+- Gender: More male players
+
+#### Strategy Genre (3 games)
+- **STR_001**: "Empire Builder" - Grand strategy
+  - Max Level: 50
+  - Max Achievements: 130
+  - Typical playtime: 100-800 hours
+  - Monetization: Medium (DLC expansions, civilization packs)
+
+- **STR_002**: "Tower Defense Masters" - Tower defense
+  - Max Level: 75
+  - Max Achievements: 80
+  - Typical playtime: 40-200 hours
+  - Monetization: Medium (tower packs, cosmetics)
+
+- **STR_003**: "Chess Legends Online" - Turn-based strategy
+  - Max Level: 30 (ranking system)
+  - Max Achievements: 50
+  - Typical playtime: 50-500 hours
+  - Monetization: Low-Medium (premium features, cosmetics)
+
+**Strategy Genre Patterns**:
+- Long session durations (thoughtful gameplay)
+- Older demographic bias (25-50 years)
+- Medium monetization (expansion-focused)
+- Lower session frequency, longer duration
+- High difficulty tolerance
+- More balanced gender distribution
+
+### Cross-Game Patterns
+- **Genre-loyal players**: Play multiple games in same genre (e.g., RPG_001 + RPG_003)
+- **Diversified players**: Play across genres (e.g., ACT_001 + STR_002)
+- **Whale behavior**: More likely in RPG (especially MMORPG) and competitive Action games
+- **Multi-game players**: Typically 1-3 games, rarely 4+
 
 ### Relationships to Define
 
@@ -109,40 +219,65 @@ We have **TWO** target variables to provide students with different ML learning 
 - [ ] **Challenge-Seeking**: Combination of difficulty + achievements
 
 #### SpendingPropensity Dependencies
+- [ ] **PurchaseCount, TotalSpend, AvgPurchasesPerMonth**: Core spending metrics used to derive SpendingPropensity
 - [ ] **EngagementLevel**: High engagement → more spending
 - [ ] **PlayTimeHours**: More time invested → more spending
 - [ ] **DaysPlayed**: Longer-term players spend more (commitment)
-- [ ] **GameGenre**: RPG/Strategy players spend more than Sports players
+- [ ] **GameGenre**: RPG players spend most (especially MMORPG), Strategy medium, Action varied (high for competitive games)
 - [ ] **Age**: Older players (disposable income) spend more
 - [ ] **AchievementsUnlocked**: Completionists spend more
-- [ ] **PurchaseCount & TotalSpendUSD**: Core spending metrics used to derive SpendingPropensity
 
 #### Natural Correlations (for EDA discovery)
 - [ ] **PlayTimeHours ↔ PlayerLevel**: Strong positive correlation (more time = higher level)
 - [ ] **PlayTimeHours ↔ AchievementsUnlocked**: Moderate positive correlation
 - [ ] **DaysPlayed ↔ PlayTimeHours**: Strong positive correlation (longer tenure = more hours)
 - [ ] **SessionsPerWeek × AvgSessionDurationMinutes ↔ PlayTimeHours**: Mathematical relationship with variance
-- [ ] **Age ↔ GameGenre**: Demographic preferences (younger → Action/Sports, older → Strategy)
-- [ ] **Gender ↔ GameGenre**: Demographic preferences (to define)
+- [ ] **Age ↔ GameGenre**: Demographic preferences (younger 16-35 → Action, middle 25-45 → RPG, older 25-50 → Strategy)
+- [ ] **Gender ↔ GameGenre**: Demographic preferences (Action skews male, Strategy balanced, RPG slight male bias)
 - [ ] **EngagementLevel**: Function of PlayTime, Sessions, Achievements, DaysPlayed
-- [ ] **PurchaseCount ↔ TotalSpendUSD**: Strong positive correlation (more purchases = more spend)
+- [ ] **PurchaseCount ↔ TotalSpend**: Strong positive correlation (more purchases = more spend)
 - [ ] **PlayerLevel ↔ GameDifficulty**: Players at higher levels may choose harder difficulties
 - [ ] **Multi-game players**: Players with multiple games may have different patterns (diversification)
 
 #### Domain Rules & Constraints
 - [ ] **Age range**: 13-65 years (realistic gaming demographic)
-- [ ] **PlayerLevel range**: 1-100 (game-specific, may vary by genre)
+  - Action: 16-35 (younger bias)
+  - RPG: 20-50 (middle-age bias)
+  - Strategy: 22-60 (older bias)
+- [ ] **PlayerLevel range**: Game-specific (see Game Catalog above)
+  - RPG: 75-100 max
+  - Action: 40-100 max
+  - Strategy: 30-75 max
 - [ ] **SessionsPerWeek**: 0-21 (0 = inactive, 21 = 3/day max)
-- [ ] **AvgSessionDurationMinutes**: 15-240 minutes (15 min = casual, 4 hrs = hardcore)
-- [ ] **PlayTimeHours**: 0.5-2000+ hours (wide range, heavy-tailed distribution)
-- [ ] **DaysPlayed**: 1-1095 (up to ~3 years of activity)
-- [ ] **AchievementsUnlocked**: 0-100+ (varies by game)
-- [ ] **PurchaseCount**: 0-200+ (most 0, some whales very high)
-- [ ] **TotalSpendUSD**: $0-$10,000+ (heavy-tailed, most $0)
+  - Action: Higher frequency (5-15/week typical)
+  - RPG: Medium frequency (3-10/week typical)
+  - Strategy: Lower frequency (2-7/week typical)
+- [ ] **AvgSessionDurationMinutes**: 15-240 minutes
+  - Action: Shorter (30-90 min typical)
+  - RPG: Medium-Long (60-180 min typical)
+  - Strategy: Longer (60-240 min typical)
+- [ ] **PlayTimeHours**: 0.5-2000+ hours (game-specific, see Game Catalog)
+- [ ] **DaysPlayed**: 7-1095 (1 week to ~3 years of activity)
+- [ ] **AchievementsUnlocked**: Game-specific (see Game Catalog)
+- [ ] **PurchaseCount**: 0-200+ (total count, most 0, some whales very high)
+- [ ] **TotalSpend**: £0-£8,000+ (heavy-tailed, most £0, all amounts in GBP)
+  - RPG_003 (MMORPG): Highest spending
+  - ACT_001 (Battle Royale): High spending
+  - ACT_004, STR_003: Lower spending
+- [ ] **AvgPurchasesPerMonth**: 0-10+ (most 0, occasional 0.5-2, whales 2-10+)
 - [ ] **Location distribution**: USA 35%, Europe 30%, Asia 25%, Other 10%
-- [ ] **GameGenre distribution**: Balanced or realistic (RPG/Action popular)
-- [ ] **Number of games per player**: Most 1-3, some up to 5-10
-- [ ] **Number of unique games**: 50-200 different GameIDs total
+- [ ] **GameGenre distribution**:
+  - RPG: 40% of rows (popular + high retention)
+  - Action: 40% of rows (popular + varied)
+  - Strategy: 20% of rows (niche but dedicated)
+- [ ] **Number of games per player**:
+  - 1 game: 60%
+  - 2 games: 25%
+  - 3 games: 12%
+  - 4+ games: 3%
+- [ ] **GameID distribution**: 11 total games (4 RPG, 4 Action, 3 Strategy)
+  - Popular games (RPG_003, ACT_001): More players
+  - Niche games (ACT_004, STR_003): Fewer players
 
 ---
 
@@ -203,11 +338,20 @@ _This section will capture key decisions and rationale as we discuss_
     - Factors: GameDifficulty, efficiency metrics, consistency, skill progression, challenge-seeking
   - `SpendingPropensity`: Easier task, clear business link, good for teaching
     - 3 classes: NonSpender (55%), Occasional (35%), Whale (10%)
-    - Factors: PurchaseCount, TotalSpendUSD, EngagementLevel, PlayTimeHours, DaysPlayed, GameGenre, Age, Achievements
+    - Factors: PurchaseCount, TotalSpend, EngagementLevel, PlayTimeHours, DaysPlayed, GameGenre (RPG high), Specific Games (RPG_003, ACT_001), Age, Achievements
   - Both variables provide class imbalance for students to handle
   - SpendingPropensity gives obvious business application for teaching
   - **Multi-game structure**: Each row is player-game combination, enabling feature engineering
     - Added GameID alongside PlayerID
-    - Added spending features: PurchaseCount, TotalSpendUSD, AvgSessionSpendUSD
+    - **3 genres only** (reduced from 5): RPG, Action, Strategy
+      - 11 total games: 4 RPG, 4 Action, 3 Strategy
+      - Each game has distinct characteristics (max level, achievements, monetization)
+      - Enables genre-loyal vs diversified player patterns
+    - Added spending features (all in GBP):
+      - PurchaseCount: Total count of purchases
+      - TotalSpend: Total monetary value
+      - AvgPurchasesPerMonth: Purchase frequency (how often)
+      - AvgPurchaseValue: Transaction size (large vs small purchases)
+      - All spending normalized to GBP for consistency across global regions
     - Added DaysPlayed for tenure/commitment tracking
     - Students can aggregate by player (count games, sum spending, identify genre preferences)
