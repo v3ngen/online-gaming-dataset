@@ -1,0 +1,13 @@
+# Python dependencies for online gaming dataset generation and validation
+
+# Core data manipulation
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Statistical analysis
+scipy>=1.10.0
+
+# Optional: For advanced ML validation (not required for generation)
+# scikit-learn>=1.3.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
