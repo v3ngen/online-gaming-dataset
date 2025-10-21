@@ -12,20 +12,25 @@ This project generates a coherent dataset about online gaming behavior for educa
 
 ## Dataset Structure
 
+### Original Dataset
 The original dataset (`data/online_gaming_original.csv`) contains ~40,000 records with the following features:
-- PlayerID
-- Age
-- Gender
-- Location
-- GameGenre
-- PlayTimeHours
-- InGamePurchases
-- GameDifficulty
-- SessionsPerWeek
-- AvgSessionDurationMinutes
-- PlayerLevel
-- AchievementsUnlocked
-- EngagementLevel
+- PlayerID, Age, Gender, Location, GameGenre, PlayTimeHours, InGamePurchases, GameDifficulty, SessionsPerWeek, AvgSessionDurationMinutes, PlayerLevel, AchievementsUnlocked, EngagementLevel
+
+### Generated Dataset
+The generated dataset (`generated_gaming_dataset.csv`) contains ~10,000 player-game combinations with 21 features organized as:
+
+**Player-level attributes (fixed per PlayerID):**
+- PlayerID, Age, Gender, Location
+
+**Game-specific attributes:**
+- GameID, GameName, GameGenre, GameDifficulty
+
+**Behavioral & spending metrics:**
+- PlayTimeHours, SessionsPerWeek, AvgSessionDurationMinutes, PlayerLevel, AchievementsUnlocked, EngagementLevel, DaysPlayed, PurchaseCount, TotalSpend, AvgPurchasesPerMonth, AvgPurchaseValue
+
+**Target variables (for ML):**
+- SpendingPropensity (NonSpender, Occasional, Whale)
+- PlayerExpertise (Beginner, Intermediate, Expert)
 
 ## Project Goals
 

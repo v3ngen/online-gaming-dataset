@@ -53,17 +53,7 @@ num_players = ~4,000-5,000 (to get 10,000 rows with multi-game)
 PlayerID = range(1, num_players + 1)
 ```
 
-#### Step 2: Generate Gender
-```
-Gender distribution (overall):
-- Male: 63%
-- Female: 35%
-- Other: 2%
-
-Implementation: np.random.choice(['Male', 'Female', 'Other'], p=[0.63, 0.35, 0.02])
-```
-
-#### Step 3: Generate Location
+#### Step 2: Generate Location
 ```
 Location distribution:
 - USA: 40%
@@ -73,9 +63,9 @@ Location distribution:
 Implementation: np.random.choice(['USA', 'Europe', 'Asia'], p=[0.40, 0.35, 0.25])
 ```
 
-#### Step 4: Generate Age
+#### Step 3: Generate Age
 ```
-Age distribution by genre preference (we'll use to bias later):
+Age distribution:
 - Overall range: 13-65 years
 - Distribution: Beta distribution shifted and scaled
   - Mode around 25-30 years (peak gaming demographic)
@@ -85,6 +75,8 @@ Implementation:
 base_age = np.random.beta(2, 5, size=n) * 52 + 13  # Beta(2,5) scaled to 13-65
 Age = np.round(base_age).astype(int)
 ```
+
+**NOTE**: Gender is NOT assigned at this stage. It will be assigned per player-game row based on the game's genre to achieve realistic genre-specific gender distributions.
 
 ---
 
@@ -101,7 +93,7 @@ Distribution:
 Implementation: Weighted random choice, then create player-game rows
 ```
 
-#### Step 6: Assign GameID and GameGenre
+#### Step 6: Assign GameID, GameGenre, and Gender
 
 **Game Catalog**:
 ```python
@@ -138,13 +130,29 @@ def get_genre_probabilities(location):
         return {'RPG': 0.50, 'Action': 0.30, 'Strategy': 0.20}
 ```
 
-**Gender Distribution by Genre** (validate after generation):
+**Gender Assignment by Genre**:
+
+Gender is assigned PER PLAYER based on their primary (first) game's genre:
+```python
+def get_gender_probabilities(genre):
+    if genre == 'RPG':
+        return {'Male': 0.53, 'Female': 0.45, 'Other': 0.02}
+    elif genre == 'Action':
+        return {'Male': 0.73, 'Female': 0.25, 'Other': 0.02}
+    elif genre == 'Strategy':
+        return {'Male': 0.58, 'Female': 0.40, 'Other': 0.02}
+
+# For each player, assign gender based on first game's genre:
+primary_genre = GAMES[selected_games[0]]['genre']
+player_gender = np.random.choice(['Male', 'Female', 'Other'],
+                                 p=get_gender_probabilities(primary_genre))
+# This gender is then used consistently across all of the player's games
 ```
-Action: 73% Male, 25% Female, 2% Other
-RPG: 53% Male, 45% Female, 2% Other
-Strategy: 58% Male, 40% Female, 2% Other
-```
-*Note: This is achieved through biased sampling, not hard constraints*
+
+**IMPORTANT**: Gender is assigned at the PLAYER level (consistent across all games) based on the player's primary game genre. This ensures:
+1. Player-level consistency: Age, Gender, Location are the same across all games for multi-game players
+2. Genre-specific distributions: Different genres attract different demographics
+3. Validation: Students can verify player consistency and analyze gender patterns by genre
 
 **Age Bias by Genre**:
 ```python

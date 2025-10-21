@@ -66,47 +66,54 @@ We have **TWO** target variables to provide students with different ML learning 
 
 **Estimated Row Count**: ~10,000 rows representing player-game combinations
 
-### Feature List (20 features total)
+### Feature List (21 features total)
 
-**Note**: Features are numbered for reference but may appear in any order in the final dataset.
+The dataset columns are organized logically:
+- **Features 1-4**: Player-level attributes (fixed for each PlayerID across all games)
+- **Features 5-8**: Game-specific attributes
+- **Features 9-15**: Behavioral metrics
+- **Features 16-19**: Spending metrics
+- **Features 20-21**: Target variables
 
-#### Identifiers
+#### Player-Level Attributes (Fixed per PlayerID)
 1. **PlayerID** - Unique player identifier (will repeat for players playing multiple games)
-2. **GameID** - Unique game identifier (allows same player to play different games)
+2. **Age** - Player age (integer, years)
+3. **Gender** - Player gender {Male, Female, Other}
+   - Gender is assigned based on player's primary game genre to achieve realistic distributions
+   - Action: 73% Male, 25% Female, 2% Other
+   - RPG: 53% Male, 45% Female, 2% Other
+   - Strategy: 58% Male, 40% Female, 2% Other
+4. **Location** - Geographic region {USA, Europe, Asia}
 
-#### Demographics (Player-level attributes)
-3. **Age** - Player age (integer, years)
-4. **Gender** - Player gender {Male, Female, Other}
-   - Overall distribution: 63% Male, 35% Female, 2% Other
-5. **Location** - Geographic region {USA, Europe, Asia}
-
-#### Game Context
-6. **GameGenre** - Type of game {RPG, Action, Strategy}
-7. **GameDifficulty** - Difficulty setting chosen by player {Easy, Medium, Hard}
+#### Game-Specific Attributes
+5. **GameID** - Unique game identifier (e.g., RPG_001, ACT_001, STR_001)
+6. **GameName** - Human-readable game name (e.g., "Dragon's Quest", "Battle Royale Extreme")
+7. **GameGenre** - Type of game {RPG, Action, Strategy}
+8. **GameDifficulty** - Difficulty setting chosen by player {Easy, Medium, Hard}
 
 #### Behavioral Metrics (Player-Game specific)
-8. **PlayTimeHours** - Total hours played in this specific game (float)
-9. **SessionsPerWeek** - Average gaming sessions per week for this game (integer)
-10. **AvgSessionDurationMinutes** - Average session length for this game (integer, minutes)
-11. **PlayerLevel** - Level achieved in this game (integer)
-12. **AchievementsUnlocked** - Number of achievements unlocked in this game (integer)
+9. **PlayTimeHours** - Total hours played in this specific game (float)
+10. **SessionsPerWeek** - Average gaming sessions per week for this game (integer)
+11. **AvgSessionDurationMinutes** - Average session length for this game (integer, minutes)
+12. **PlayerLevel** - Level achieved in this game (integer)
+13. **AchievementsUnlocked** - Number of achievements unlocked in this game (integer)
 
 #### Engagement Indicators
-13. **EngagementLevel** - Overall engagement with this game {Low, Medium, High}
-14. **DaysPlayed** - Number of days player has been active in this game (integer)
+14. **EngagementLevel** - Overall engagement with this game {Low, Medium, High}
+15. **DaysPlayed** - Number of days player has been active in this game (integer)
 
 #### Spending Behavior
-15. **PurchaseCount** - Total count of in-game purchases made in this game (integer, 0+)
-16. **TotalSpend** - Total amount spent in this game (float, GBP, 0+)
+16. **PurchaseCount** - Total count of in-game purchases made in this game (integer, 0+)
+17. **TotalSpend** - Total amount spent in this game (float, GBP, 0+)
    - All spending normalized to GBP for consistency across regions
-17. **AvgPurchasesPerMonth** - Average purchase frequency per month (float, PurchaseCount / (DaysPlayed / 30))
+18. **AvgPurchasesPerMonth** - Average purchase frequency per month (float, PurchaseCount / (DaysPlayed / 30))
    - Captures spending cadence (e.g., 2 purchases/month vs 0.1 purchases/month)
-18. **AvgPurchaseValue** - Average value per purchase (float, TotalSpend / PurchaseCount, £0 if no purchases)
+19. **AvgPurchaseValue** - Average value per purchase (float, TotalSpend / PurchaseCount, £0 if no purchases)
    - Distinguishes spending patterns: high frequency/low value vs low frequency/high value
 
 #### Target Variables (ML Prediction)
-19. **PlayerExpertise** - Expertise level {Beginner, Intermediate, Expert}
 20. **SpendingPropensity** - Spending behavior category {NonSpender, Occasional, Whale}
+21. **PlayerExpertise** - Expertise level {Beginner, Intermediate, Expert}
 
 ### Game Catalog
 

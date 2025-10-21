@@ -65,10 +65,11 @@ class DatasetValidator:
 
         expected_types = {
             'PlayerID': 'int',
-            'GameID': 'object',
             'Age': 'int',
             'Gender': 'object',
             'Location': 'object',
+            'GameID': 'object',
+            'GameName': 'object',
             'GameGenre': 'object',
             'GameDifficulty': 'object',
             'PlayTimeHours': 'float',
@@ -82,8 +83,8 @@ class DatasetValidator:
             'TotalSpend': 'float',
             'AvgPurchasesPerMonth': 'float',
             'AvgPurchaseValue': 'float',
-            'PlayerExpertise': 'object',
             'SpendingPropensity': 'object',
+            'PlayerExpertise': 'object',
         }
 
         type_issues = []
@@ -312,7 +313,8 @@ class DatasetValidator:
         # Group by PlayerID
         player_groups = self.df.groupby('PlayerID')
 
-        # Check that Age, Gender, Location are consistent for same player
+        # Check that Age, Gender, and Location are consistent for same player
+        # These are player-level attributes that should not vary across games
         inconsistent_players = []
 
         for player_id, group in player_groups:

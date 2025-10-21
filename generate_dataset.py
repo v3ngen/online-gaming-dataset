@@ -162,6 +162,25 @@ GAMES = {
 # HELPER FUNCTIONS
 # ============================================================================
 
+def get_gender_probabilities(genre: str) -> Dict[str, float]:
+    """Get gender distribution probabilities based on game genre
+
+    Based on 2024 gaming research:
+    - RPG: Most balanced (45% Female)
+    - Action: Male-dominated (25% Female)
+    - Strategy: Relatively balanced (40% Female)
+    """
+    if genre == 'RPG':
+        return {'Male': 0.53, 'Female': 0.45, 'Other': 0.02}
+    elif genre == 'Action':
+        return {'Male': 0.73, 'Female': 0.25, 'Other': 0.02}
+    elif genre == 'Strategy':
+        return {'Male': 0.58, 'Female': 0.40, 'Other': 0.02}
+    else:
+        # Fallback to overall distribution
+        return {'Male': 0.63, 'Female': 0.35, 'Other': 0.02}
+
+
 def get_genre_probabilities(location: str) -> Dict[str, float]:
     """Get genre selection probabilities based on location"""
     if location == 'USA':
@@ -278,21 +297,14 @@ class DatasetGenerator:
         # Step 1: PlayerID
         player_ids = np.arange(1, num_players + 1)
 
-        # Step 2: Gender
-        genders = np.random.choice(
-            list(self.config.gender_dist.keys()),
-            size=num_players,
-            p=list(self.config.gender_dist.values())
-        )
-
-        # Step 3: Location
+        # Step 2: Location (needed before games to determine genre preferences)
         locations = np.random.choice(
             list(self.config.location_dist.keys()),
             size=num_players,
             p=list(self.config.location_dist.values())
         )
 
-        # Step 4: Age (Beta distribution)
+        # Step 3: Age (Beta distribution)
         age_beta = np.random.beta(
             self.config.age_beta_a,
             self.config.age_beta_b,
@@ -301,16 +313,23 @@ class DatasetGenerator:
         ages = (age_beta * (self.config.age_max - self.config.age_min) +
                 self.config.age_min).astype(int)
 
+        # NOTE: Gender is NOT assigned here - it will be assigned based on
+        # the player's primary game genre to reflect realistic gender distributions
         self.players_df = pd.DataFrame({
             'PlayerID': player_ids,
             'Age': ages,
-            'Gender': genders,
             'Location': locations,
         })
 
     def assign_games_to_players(self):
-        """Assign games to players based on demographics (Steps 5-6)"""
+        """Assign games to players based on demographics (Steps 5-6)
+
+        Gender is assigned per player based on their primary (first) game's genre.
+        This ensures gender is consistent for each player across all their games,
+        while achieving the desired genre-specific gender distributions.
+        """
         player_game_rows = []
+        player_genders = {}  # Cache gender per player
 
         for _, player in self.players_df.iterrows():
             # Step 5: Determine number of games for this player
@@ -319,10 +338,13 @@ class DatasetGenerator:
                 p=list(self.config.games_per_player_dist.values())
             )
 
-            # Step 6: Select games based on location and demographics
+            # Step 6: Select games based on location
             genre_probs = get_genre_probabilities(player['Location'])
 
-            selected_games = set()
+            selected_games = []
+            selected_game_ids = set()
+
+            # Select all games for this player first
             for _ in range(num_games):
                 # Select genre
                 genre = np.random.choice(
@@ -335,7 +357,7 @@ class DatasetGenerator:
 
                 # Avoid duplicate games for same player
                 attempts = 0
-                while game_id in selected_games and attempts < 10:
+                while game_id in selected_game_ids and attempts < 10:
                     genre = np.random.choice(
                         list(genre_probs.keys()),
                         p=list(genre_probs.values())
@@ -343,15 +365,28 @@ class DatasetGenerator:
                     game_id = select_game(genre, player['Location'])
                     attempts += 1
 
-                selected_games.add(game_id)
+                selected_game_ids.add(game_id)
+                selected_games.append(game_id)
 
-                # Create player-game row
+            # Assign gender based on FIRST game's genre (primary genre)
+            # This ensures gender consistency per player while achieving genre distributions
+            primary_game_genre = GAMES[selected_games[0]]['genre']
+            gender_probs = get_gender_probabilities(primary_game_genre)
+            player_gender = np.random.choice(
+                list(gender_probs.keys()),
+                p=list(gender_probs.values())
+            )
+            player_genders[player['PlayerID']] = player_gender
+
+            # Create player-game rows with consistent gender
+            for game_id in selected_games:
                 player_game_rows.append({
                     'PlayerID': player['PlayerID'],
                     'Age': player['Age'],
-                    'Gender': player['Gender'],
+                    'Gender': player_gender,  # Consistent across all games
                     'Location': player['Location'],
                     'GameID': game_id,
+                    'GameName': GAMES[game_id]['name'],
                     'GameGenre': GAMES[game_id]['genre'],
                 })
 
@@ -740,12 +775,17 @@ class DatasetGenerator:
     def get_dataset(self) -> pd.DataFrame:
         """Return the generated dataset with columns in correct order"""
         column_order = [
-            'PlayerID', 'GameID', 'Age', 'Gender', 'Location', 'GameGenre',
-            'GameDifficulty', 'PlayTimeHours', 'SessionsPerWeek',
-            'AvgSessionDurationMinutes', 'PlayerLevel', 'AchievementsUnlocked',
-            'EngagementLevel', 'DaysPlayed', 'PurchaseCount', 'TotalSpend',
-            'AvgPurchasesPerMonth', 'AvgPurchaseValue', 'PlayerExpertise',
-            'SpendingPropensity'
+            # Player-level attributes (fixed across all games)
+            'PlayerID', 'Age', 'Gender', 'Location',
+            # Game-specific attributes
+            'GameID', 'GameName', 'GameGenre', 'GameDifficulty',
+            # Behavioral metrics
+            'PlayTimeHours', 'SessionsPerWeek', 'AvgSessionDurationMinutes',
+            'PlayerLevel', 'AchievementsUnlocked', 'EngagementLevel', 'DaysPlayed',
+            # Spending metrics
+            'PurchaseCount', 'TotalSpend', 'AvgPurchasesPerMonth', 'AvgPurchaseValue',
+            # Target variables
+            'SpendingPropensity', 'PlayerExpertise'
         ]
 
         return self.dataset_df[column_order]
