@@ -49,9 +49,10 @@ We have **TWO** target variables to provide students with different ML learning 
 3. **PlayTimeHours** - Invested time → invested money (sunk cost fallacy)
 4. **DaysPlayed** - Longer-term commitment → more spending
 5. **GameGenre** - RPG (esp. MMORPG) and competitive Action spend most; Strategy medium
-6. **Specific Games** - RPG_003 and ACT_001 have highest whale rates
-7. **Age** - Disposable income patterns (older players may spend more)
-8. **AchievementsUnlocked** - Completionists spend more to unlock content
+6. **Specific Games** - RPG_002 (MMORPG) and ACT_001 (Battle Royale) have highest whale rates
+7. **Location** - Asia has higher whale concentration (MMORPG culture)
+8. **Age** - Disposable income patterns (older players may spend more)
+9. **AchievementsUnlocked** - Completionists spend more to unlock content
 
 ---
 
@@ -76,7 +77,8 @@ We have **TWO** target variables to provide students with different ML learning 
 #### Demographics (Player-level attributes)
 3. **Age** - Player age (integer, years)
 4. **Gender** - Player gender {Male, Female, Other}
-5. **Location** - Geographic region {USA, Europe, Asia, Other}
+   - Overall distribution: 63% Male, 35% Female, 2% Other
+5. **Location** - Geographic region {USA, Europe, Asia}
 
 #### Game Context
 6. **GameGenre** - Type of game {RPG, Action, Strategy}
@@ -108,28 +110,23 @@ We have **TWO** target variables to provide students with different ML learning 
 
 ### Game Catalog
 
-**Total Games**: 11 games across 3 genres
+**Total Games**: 9 games across 3 genres (3 per genre)
 
-#### RPG Genre (4 games)
+#### RPG Genre (3 games)
 - **RPG_001**: "Dragon's Quest" - High fantasy RPG
   - Max Level: 100
   - Max Achievements: 120
   - Typical playtime: 200-800 hours
   - Monetization: High (cosmetics, expansions, convenience items)
 
-- **RPG_002**: "Eternal Legends" - Story-driven JRPG
-  - Max Level: 99
-  - Max Achievements: 95
-  - Typical playtime: 100-500 hours
-  - Monetization: Medium-High (character packs, story DLC)
-
-- **RPG_003**: "Mystic Realms Online" - MMORPG
+- **RPG_002**: "Mystic Realms Online" - MMORPG
   - Max Level: 80
   - Max Achievements: 150
   - Typical playtime: 300-2000+ hours
   - Monetization: Very High (subscriptions, cosmetics, pay-to-progress)
+  - Popular in Asia
 
-- **RPG_004**: "Dungeon Crawler Deluxe" - Action RPG
+- **RPG_003**: "Dungeon Crawler Deluxe" - Action RPG
   - Max Level: 75
   - Max Achievements: 85
   - Typical playtime: 50-300 hours
@@ -138,17 +135,20 @@ We have **TWO** target variables to provide students with different ML learning 
 **RPG Genre Patterns**:
 - High playtime overall
 - High achievement focus (completionists)
-- Strong monetization (especially RPG_003)
+- Strong monetization (especially RPG_002 MMORPG)
 - Older demographic bias (25-45 years)
 - High engagement levels
 - Players often play multiple RPG games
+- **Gender distribution**: 45% Female, 53% Male, 2% Other (most balanced genre - women love RPGs)
+- **Location bias**: Popular in Asia (especially MMORPGs)
 
-#### Action Genre (4 games)
+#### Action Genre (3 games)
 - **ACT_001**: "Battle Royale Extreme" - Competitive shooter
   - Max Level: 100
   - Max Achievements: 110
   - Typical playtime: 100-1000 hours
   - Monetization: High (battle passes, skins, weapons)
+  - Popular in USA
 
 - **ACT_002**: "Zombie Apocalypse" - Co-op survival
   - Max Level: 50
@@ -162,19 +162,14 @@ We have **TWO** target variables to provide students with different ML learning 
   - Typical playtime: 50-500 hours
   - Monetization: Medium (character DLC, cosmetics)
 
-- **ACT_004**: "Ninja Warriors" - Platformer/Action
-  - Max Level: 40
-  - Max Achievements: 60
-  - Typical playtime: 20-100 hours
-  - Monetization: Low (mostly paid game, minimal microtransactions)
-
 **Action Genre Patterns**:
 - Varied playtime (wide range)
 - Younger demographic bias (16-35 years)
-- Mixed monetization (ACT_001 high, ACT_004 low)
+- Mixed monetization (ACT_001 high, ACT_002 low)
 - Shorter session durations, higher frequency
 - Difficulty varies widely
-- Gender: More male players
+- **Gender distribution**: 25% Female, 73% Male, 2% Other (male-dominated, especially shooters)
+- **Location bias**: Popular in USA (especially Battle Royale/shooters)
 
 #### Strategy Genre (3 games)
 - **STR_001**: "Empire Builder" - Grand strategy
@@ -182,6 +177,7 @@ We have **TWO** target variables to provide students with different ML learning 
   - Max Achievements: 130
   - Typical playtime: 100-800 hours
   - Monetization: Medium (DLC expansions, civilization packs)
+  - Popular in Europe
 
 - **STR_002**: "Tower Defense Masters" - Tower defense
   - Max Level: 75
@@ -201,13 +197,18 @@ We have **TWO** target variables to provide students with different ML learning 
 - Medium monetization (expansion-focused)
 - Lower session frequency, longer duration
 - High difficulty tolerance
-- More balanced gender distribution
+- **Gender distribution**: 40% Female, 58% Male, 2% Other (relatively balanced - strategy ranks 2nd for female gamers)
+- **Location bias**: Popular in Europe (strong strategy gaming culture)
 
 ### Cross-Game Patterns
-- **Genre-loyal players**: Play multiple games in same genre (e.g., RPG_001 + RPG_003)
+- **Genre-loyal players**: Play multiple games in same genre (e.g., RPG_001 + RPG_002)
 - **Diversified players**: Play across genres (e.g., ACT_001 + STR_002)
-- **Whale behavior**: More likely in RPG (especially MMORPG) and competitive Action games
+- **Whale behavior**: More likely in RPG_002 (MMORPG) and ACT_001 (competitive shooter)
 - **Multi-game players**: Typically 1-3 games, rarely 4+
+- **Location-genre correlations**:
+  - USA players slightly favor Action games
+  - Europe players slightly favor Strategy games
+  - Asia players slightly favor RPG games (especially MMORPGs)
 
 ### Relationships to Define
 
@@ -224,6 +225,8 @@ We have **TWO** target variables to provide students with different ML learning 
 - [ ] **PlayTimeHours**: More time invested → more spending
 - [ ] **DaysPlayed**: Longer-term players spend more (commitment)
 - [ ] **GameGenre**: RPG players spend most (especially MMORPG), Strategy medium, Action varied (high for competitive games)
+- [ ] **Specific Games**: RPG_002 (MMORPG) and ACT_001 (Battle Royale) highest whale rates
+- [ ] **Location**: Asia has higher whale concentration (MMORPG culture)
 - [ ] **Age**: Older players (disposable income) spend more
 - [ ] **AchievementsUnlocked**: Completionists spend more
 
@@ -233,7 +236,15 @@ We have **TWO** target variables to provide students with different ML learning 
 - [ ] **DaysPlayed ↔ PlayTimeHours**: Strong positive correlation (longer tenure = more hours)
 - [ ] **SessionsPerWeek × AvgSessionDurationMinutes ↔ PlayTimeHours**: Mathematical relationship with variance
 - [ ] **Age ↔ GameGenre**: Demographic preferences (younger 16-35 → Action, middle 25-45 → RPG, older 25-50 → Strategy)
-- [ ] **Gender ↔ GameGenre**: Demographic preferences (Action skews male, Strategy balanced, RPG slight male bias)
+- [ ] **Gender ↔ GameGenre**: Strong demographic preferences based on research
+  - Action: 25% Female, 73% Male, 2% Other (male-dominated)
+  - RPG: 45% Female, 53% Male, 2% Other (most balanced - women love RPGs)
+  - Strategy: 40% Female, 58% Male, 2% Other (relatively balanced)
+- [ ] **Location ↔ GameGenre**: Regional gaming culture differences
+  - USA: 45% Action, 35% RPG, 20% Strategy (shooter culture)
+  - Europe: 35% Action, 35% RPG, 30% Strategy (strategy gaming culture)
+  - Asia: 30% Action, 50% RPG, 20% Strategy (MMORPG culture)
+- [ ] **Location ↔ SpendingPropensity**: Asia higher whale concentration
 - [ ] **EngagementLevel**: Function of PlayTime, Sessions, Achievements, DaysPlayed
 - [ ] **PurchaseCount ↔ TotalSpend**: Strong positive correlation (more purchases = more spend)
 - [ ] **PlayerLevel ↔ GameDifficulty**: Players at higher levels may choose harder difficulties
@@ -261,11 +272,19 @@ We have **TWO** target variables to provide students with different ML learning 
 - [ ] **AchievementsUnlocked**: Game-specific (see Game Catalog)
 - [ ] **PurchaseCount**: 0-200+ (total count, most 0, some whales very high)
 - [ ] **TotalSpend**: £0-£8,000+ (heavy-tailed, most £0, all amounts in GBP)
-  - RPG_003 (MMORPG): Highest spending
+  - RPG_002 (MMORPG): Highest spending
   - ACT_001 (Battle Royale): High spending
-  - ACT_004, STR_003: Lower spending
+  - ACT_002, STR_003: Lower spending
+  - Asia players higher whale concentration (especially in RPG_002)
 - [ ] **AvgPurchasesPerMonth**: 0-10+ (most 0, occasional 0.5-2, whales 2-10+)
-- [ ] **Location distribution**: USA 35%, Europe 30%, Asia 25%, Other 10%
+- [ ] **Gender distribution**:
+  - Overall: 63% Male, 35% Female, 2% Other
+  - By genre: Action (73% M, 25% F), RPG (53% M, 45% F), Strategy (58% M, 40% F)
+- [ ] **Location distribution**: USA 40%, Europe 35%, Asia 25%
+  - Location-genre biases:
+    - USA: 45% Action, 35% RPG, 20% Strategy
+    - Europe: 35% Action, 35% RPG, 30% Strategy
+    - Asia: 30% Action, 50% RPG, 20% Strategy
 - [ ] **GameGenre distribution**:
   - RPG: 40% of rows (popular + high retention)
   - Action: 40% of rows (popular + varied)
@@ -275,9 +294,13 @@ We have **TWO** target variables to provide students with different ML learning 
   - 2 games: 25%
   - 3 games: 12%
   - 4+ games: 3%
-- [ ] **GameID distribution**: 11 total games (4 RPG, 4 Action, 3 Strategy)
-  - Popular games (RPG_003, ACT_001): More players
-  - Niche games (ACT_004, STR_003): Fewer players
+- [ ] **GameID distribution**: 9 total games (3 RPG, 3 Action, 3 Strategy)
+  - Popular games (RPG_002 MMORPG, ACT_001 Battle Royale): More players
+  - Niche games (ACT_002, STR_003): Fewer players
+  - Location-game correlations:
+    - RPG_002 (MMORPG) popular in Asia
+    - ACT_001 (Battle Royale) popular in USA
+    - STR_001 (Grand Strategy) popular in Europe
 
 ---
 
@@ -338,15 +361,21 @@ _This section will capture key decisions and rationale as we discuss_
     - Factors: GameDifficulty, efficiency metrics, consistency, skill progression, challenge-seeking
   - `SpendingPropensity`: Easier task, clear business link, good for teaching
     - 3 classes: NonSpender (55%), Occasional (35%), Whale (10%)
-    - Factors: PurchaseCount, TotalSpend, EngagementLevel, PlayTimeHours, DaysPlayed, GameGenre (RPG high), Specific Games (RPG_003, ACT_001), Age, Achievements
+    - Factors: PurchaseCount, TotalSpend, EngagementLevel, PlayTimeHours, DaysPlayed, GameGenre (RPG high), Specific Games (RPG_002, ACT_001), Location (Asia higher whales), Age, Achievements
   - Both variables provide class imbalance for students to handle
   - SpendingPropensity gives obvious business application for teaching
   - **Multi-game structure**: Each row is player-game combination, enabling feature engineering
     - Added GameID alongside PlayerID
-    - **3 genres only** (reduced from 5): RPG, Action, Strategy
-      - 11 total games: 4 RPG, 4 Action, 3 Strategy
+    - **Simplified structure**: 3 genres, 3 games each (9 total)
+      - RPG: 3 games (Dragon's Quest, Mystic Realms MMORPG, Dungeon Crawler)
+      - Action: 3 games (Battle Royale, Zombie Apocalypse, Street Fighter)
+      - Strategy: 3 games (Empire Builder, Tower Defense, Chess Legends)
       - Each game has distinct characteristics (max level, achievements, monetization)
       - Enables genre-loyal vs diversified player patterns
+      - Realistic gender distributions based on 2024 research (RPG most balanced, Action male-dominated)
+    - **3 locations only**: USA (40%), Europe (35%), Asia (25%)
+      - Location-genre biases: USA→Action, Europe→Strategy, Asia→RPG
+      - Asia has higher whale concentration (MMORPG culture)
     - Added spending features (all in GBP):
       - PurchaseCount: Total count of purchases
       - TotalSpend: Total monetary value
