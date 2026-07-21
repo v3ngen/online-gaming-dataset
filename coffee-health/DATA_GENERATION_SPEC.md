@@ -37,12 +37,11 @@ Full quantitative analysis: `analyze_original_dataset.py` (run with `python3 ana
 2. **BMI** — moderate negative weight outside a healthy range
 3. **Sleep Quality** — moderate positive weight
 4. **Physical Activity Level** — moderate positive weight
-5. **Smoking Status** — negative weight, Current > Former > Never
+5. **Smoking Status** — negative weight, dose-response ordinal: Heavy Smoker > Light Smoker > Former > Never (see Smoking Status below)
 6. **Stress Level** — moderate negative weight
 7. **Age** — mild negative weight (older skews slightly lower, but not linear — captures general health decline without being deterministic)
 8. **Country** — small direct effect on top of the above, reflecting real cross-national self-report differences (see Country Profiles below) — agreed in dialogue as a deliberate, modest effect
-
-**Open question — new suggestion, not yet agreed**: real data shows a "gender-health paradox" — women tend to self-report lower health than men despite typically living longer. Worth a small `Gender` effect on the target for realism/discoverability? Flagging for your call rather than adding it unilaterally.
+9. **Gender** — small direct effect: Female skews slightly lower than Male, reflecting the well-documented "gender-health paradox" (women self-report lower health despite typically greater longevity) — agreed in dialogue as a deliberate, modest effect
 
 ### Target Distribution
 Should skew positive (matches real self-rated health surveys, where "Good" or better is the majority response) rather than being uniform across 5 classes. Country baselines below give a rough anchor; exact class thresholds to be tuned against validation once first-pass generation exists.
@@ -55,18 +54,18 @@ Four countries, chosen for meaningfully different coffee/lifestyle/health profil
 
 | Country | Coffee (kg/yr) | Obesity (adult) | Smoking (current, adult) | Alcohol (L pure/capita) | Self-rated health "good+" | Happiness rank 2025 |
 |---|---|---|---|---|---|---|
-| Norway | 9.9 | ~23% | 14.2% | ~6 (est.) | ~80% | Top 10 |
-| Italy | 5.9 (espresso culture) | ~13% (lowest) | 23.4% | 7.7 | 75.5% | mid-table |
-| France | 5.4 | ~24% | 34.6% (highest) | 10.4 (highest) | 68.5% (declining — was 75.2% in 2017) | #33 |
-| UK | 3.1, rising | ~30% (highest) | 12.5% (lowest) | 9.7 | not confidently sourced yet — **TODO** | Top 25 |
+| Norway | 9.9 | ~23% | 14.2% | ~6 (est.) | ~80% (sourced) | Top 10 |
+| Italy | 5.9 (espresso culture) | ~13% (lowest) | 23.4% | 7.7 | 75.5% (sourced) | mid-table |
+| France | 5.4 | ~24% | 34.6% (highest) | 10.4 (highest) | 68.5% (sourced, declining — was 75.2% in 2017) | #33 |
+| UK | 3.1, rising | ~30% (highest) | 12.5% (lowest) | 9.7 | ~65% (**extrapolated**, not sourced) | Top 25 |
 
-**Open item**: need a sourced UK self-rated-health figure before finalizing the country-effect magnitude (currently a gap, not a guess).
+**UK figure is an extrapolation, not a statistic**: no Eurostat/ONS/Health Survey for England figure was confidently sourced. Reasoning: UK has by far the highest obesity of the four (30% vs. France's 24%, more than double Italy's 13%), and obesity is one of the strongest predictors of self-rated health in the literature above — this outweighs UK's smoking advantage (lowest of the four, 12.5%) and lands UK below France (68.5%) despite France's much higher smoking rate. ~65% as the lowest of the four is a reasoned estimate; revisit if we later find a real sourced figure.
 
 **Row distribution**: proposed roughly equal (~2,500/country) for balanced cross-country comparison — open to weighting by real population if you'd prefer that instead.
 
 ### Feature-to-country mapping (proposed)
 - **Caffeine mg/cup**: vary by country (Italian espresso = smaller serving, higher concentration; Nordic filter coffee = larger volume, different mg profile) rather than a flat 95mg constant.
-- **Smoking Status base rates**: Current-smoker % sourced above (France highest, UK lowest); Never/Former split per country is an **estimate**, not sourced — needs either research or an agreed simplifying assumption.
+- **Smoking Status base rates**: Current-smoker % sourced above (France highest, UK lowest); the split of that % into Light/Heavy, and the remainder into Never/Former, is an **estimate**, not sourced — needs either research or an agreed simplifying assumption.
 - **Alcohol Level base rates**: banded from L/capita figures above into `{None, Light, Moderate, Heavy}` — banding thresholds are an estimate, open to discussion.
 - **Physical Activity baseline**: Norway skews more active (outdoor culture); others closer to WHO's ~28%-of-adults-insufficiently-active baseline — not yet country-differentiated beyond Norway, open item.
 - **BMI baseline**: shifted per country's obesity rate above.
@@ -80,29 +79,28 @@ Four countries, chosen for meaningfully different coffee/lifestyle/health profil
 2. **Age** — int, adult range (proposed 18-75)
 3. **Gender** — {Male, Female, Other}
 4. **Country** — {Italy, France, UK, Norway}
-5. **Occupation** — {Office, Healthcare, Student, Service, Other} (kept from original)
+
+Occupation has been dropped (see decision log) — Age, Gender, Country are the demographic anchors.
 
 ### Coffee & Caffeine
-6. **Daily Coffees** — cups, float
-7. **Caffeine Intake** — mg, correlated with Daily Coffees but with country-varying mg/cup
+5. **Daily Coffees** — cups, float
+6. **Caffeine Intake** — mg, correlated with Daily Coffees but with country-varying mg/cup
 
 ### Lifestyle
-8. **Smoking Status** — {Never, Former, Current} (replaces binary Smoker)
-9. **Alcohol Level** — {None, Light, Moderate, Heavy} (replaces binary Drinks Alcohol)
-10. **Physical Activity Level** — {Sedentary, Lightly Active, Moderately Active, Very Active} (standard 4-tier activity classification; replaces noisy 0-15 numeric) — driven by Age, Occupation, Country, Stress
-11. **Sleep Hours** — float
-12. **Sleep Quality** — {Poor, Fair, Good, Excellent} — rebuilt from Sleep Hours + Caffeine (esp. late-day) + Stress + Smoking + Alcohol + Age
-13. **Stress Level** — {Low, Medium, High} — generated independently from Occupation, Age, Country (not derived from Sleep Quality)
+7. **Smoking Status** — {Never, Former, Light Smoker, Heavy Smoker} (replaces binary Smoker) — intensity matters: smoking dose-response (more cigarettes/day → worse outcomes) is one of the most robustly established findings in epidemiology, so collapsing all current smokers into one bucket would throw away a genuinely important, well-grounded relationship. Exact cigarettes/day threshold splitting Light vs. Heavy (proposed: <10/day vs. ≥10/day) still needs to be pinned down in the algorithm doc.
+8. **Alcohol Level** — {None, Light, Moderate, Heavy} (replaces binary Drinks Alcohol)
+9. **Physical Activity Level** — {Sedentary, Lightly Active, Moderately Active, Very Active} (standard 4-tier activity classification; replaces noisy 0-15 numeric) — driven by Age, Country, Stress
+10. **Sleep Hours** — float
+11. **Sleep Quality** — {Poor, Fair, Good, Excellent} — rebuilt from Sleep Hours + Caffeine (esp. late-day) + Stress + Smoking + Alcohol + Age
+12. **Stress Level** — {Low, Medium, High} — generated independently from Age, Country (not derived from Sleep Quality)
 
 ### Physiology
-14. **BMI** — float, country-shifted baseline
-15. **Heart Rate** — float, linked to Physical Activity/Smoking/Stress
-16. **Health Issues** — {None, Mild, Moderate, Severe} — chronic condition indicator, strengthened links to Age, BMI, Smoking
+13. **BMI** — float, country-shifted baseline
+14. **Heart Rate** — float, linked to Physical Activity/Smoking/Stress
+15. **Health Issues** — {None, Mild, Moderate, Severe} — chronic condition indicator, strengthened links to Age, BMI, Smoking
 
 ### Target
-17. **SelfRatedHealth** — {Poor, Fair, Good, Very Good, Excellent} — see Target Variable section above
-
-**Open question**: any features to drop entirely (vs. rework)? Current proposal reworks everything from the original 16 columns rather than dropping any — worth confirming that's the right call before locking in generation logic.
+16. **SelfRatedHealth** — {Poor, Fair, Good, Very Good, Excellent} — see Target Variable section above
 
 ---
 
@@ -121,9 +119,8 @@ This whole section is a placeholder for discussion, not a decision — flagging 
 
 ## Open Questions
 
-- [ ] UK self-rated health % — need a sourced figure
-- [ ] Gender-health-paradox effect on target — add or skip?
-- [ ] Never/Former smoker split per country — estimate acceptable, or worth deeper research?
+- [ ] Light/Heavy smoker cigarettes-per-day threshold — proposed <10/day vs. ≥10/day, needs sign-off
+- [ ] Never/Former/Light/Heavy smoker split per country — estimate acceptable, or worth deeper research?
 - [ ] Alcohol Level banding thresholds from L/capita — estimate acceptable, or refine?
 - [ ] Row distribution across countries — equal (~2,500 each) or population-weighted?
 - [ ] Data quality issue rates — placeholder proposal above, needs your sign-off
@@ -137,3 +134,7 @@ This whole section is a placeholder for discussion, not a decision — flagging 
 - **2026-07-21**: Smoking/Alcohol to use categorical levels (not continuous units).
 - **2026-07-21**: Country gets a small direct effect on the target, on top of indirect effects via lifestyle features.
 - **2026-07-21**: Physical Activity to use the standard 4-tier classification {Sedentary, Lightly Active, Moderately Active, Very Active} rather than 3-tier Low/Medium/High, replacing the current noisy 0-15 numeric scale.
+- **2026-07-21**: Gender gets a small direct effect on the target (gender-health paradox: Female skews slightly lower despite typically greater longevity).
+- **2026-07-21**: UK self-rated health baseline (~65%) set by extrapolation from its obesity/smoking mix rather than a sourced statistic, since none was confidently found — flagged in the Country Profiles table rather than presented as fact.
+- **2026-07-21**: Smoking Status expanded to {Never, Former, Light Smoker, Heavy Smoker} — collapsing intensity would have discarded a well-established dose-response relationship.
+- **2026-07-21**: Occupation dropped entirely. Unlike Country/Age/BMI/Smoking, its inclusion wasn't backed by researched statistics in this session (only general domain plausibility) — and with Age, Gender, Country already anchoring demographics, dropping it simplifies the dataset as requested rather than adding an under-grounded feature. Physical Activity Level and Stress Level, which had used Occupation as an input, now derive from Age/Country/Stress and Age/Country respectively instead.
