@@ -257,7 +257,6 @@ An interactive Jupyter notebook (`analysis_demo.ipynb`) demonstrates:
 - `analysis_demo.ipynb` - Interactive demo notebook
 - `DATA_GENERATION_SPEC.md` - Feature specifications
 - `DATA_GENERATION_ALGORITHM.md` - Algorithm details
-- `CLAUDE.md` - AI assistant context
 
 ## License
 
