@@ -48,7 +48,11 @@ If there's no existing dataset to improve on, skip this step and go straight to 
 
 ### b) Spec the dataset
 
-Write a specification document (see `online-gaming/DATA_GENERATION_SPEC.md` for the pattern) covering:
+The spec is written **iteratively, as a dialogue** — not handed over as a one-shot brief. Expect a back-and-forth: you give general direction and domain knowledge, Claude may be asked to pull key stats/analysis on the existing dataset or fetch relevant research/domain details, and features get defined collaboratively from there. The spec document accumulates through that conversation rather than being drafted complete up front.
+
+Because of that, it's normal for a spec (see `online-gaming/DATA_GENERATION_SPEC.md`) to carry unchecked `[ ]` checklist items, an "Open Questions" section, and a running "Notes & Decisions" log even once the dataset is finished and in use — the checklist was a working tool during the dialogue, not a deliverable that needs to end at 100% checked off. Don't treat a spec with open items as incomplete or in need of tidying; only close items when a decision has actually superseded the question.
+
+A spec (once matured through the dialogue) covers:
 
 - **Features**: full list, types, ranges, and where they sit in the dataset's grain (e.g. per-player vs per-player-per-game).
 - **Real-world grounding**: for each meaningful relationship, note the research or domain reasoning behind it (e.g. gender/genre distributions, age/spending patterns) so the correlations are defensible, not arbitrary.
@@ -68,6 +72,8 @@ Write a specification document (see `online-gaming/DATA_GENERATION_SPEC.md` for 
 - `generate_dataset.py` — generates the dataset from the spec. Should accept a `--seed` for reproducibility and expose key parameters (row count, output path) as CLI args. Keep distribution parameters in a config object near the top of the file rather than scattered through the logic.
 - `validate_dataset.py` — checks the generated output against the spec: value ranges, data types, categorical distributions, target variable distributions, correlation strengths, logical consistency (e.g. derived columns actually match their formula), and data quality issue counts.
 - `requirements.txt` — dataset-specific dependencies (numpy, pandas, scipy at minimum).
+
+**This step loops with (b), it doesn't just follow it once.** After the first generation, Claude runs `validate_dataset.py` (and any other checks needed) and should proactively check the output against the spec without being asked — flagging mismatches rather than assuming the spec was hit. Once it looks aligned, that's the signal for you to do a manual check. Mismatches typically send you back to adjusting the spec (or the algorithm/generation logic) and regenerating, so treat b/c as one iterative cycle rather than sequential one-off steps.
 
 ### d) EDA + applied ML notebook
 
