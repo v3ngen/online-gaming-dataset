@@ -147,7 +147,7 @@ Run: `python3 validate_dataset.py generated_coffee_health_dataset.csv`
 - `DATA_GENERATION_SPEC.md` — feature specification and design rationale
 - `DATA_GENERATION_ALGORITHM.md` — exact generation algorithm
 - `requirements.txt` — Python dependencies
-- `data/` — original source dataset and its README
+- `data/` — original source dataset and its README, plus `coffee_health_v2_README.md`: the **student-facing** assignment brief for this redesigned dataset, mirroring the original `coffee_health_README.docx`'s style/structure
 
 ## License
 
