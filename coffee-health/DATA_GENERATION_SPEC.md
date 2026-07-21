@@ -66,7 +66,7 @@ Four countries, chosen for meaningfully different coffee/lifestyle/health profil
 ### Feature-to-country mapping (proposed)
 - **Caffeine mg/cup**: vary by country (Italian espresso = smaller serving, higher concentration; Nordic filter coffee = larger volume, different mg profile) rather than a flat 95mg constant.
 - **Smoking Status base rates**: Current-smoker % sourced above (France highest, UK lowest); the split of that % into Light/Heavy, and the remainder into Never/Former, is an **estimate**, not sourced — needs either research or an agreed simplifying assumption.
-- **Alcohol Level base rates**: banded from L/capita figures above into `{None, Light, Moderate, Heavy}` — banding thresholds are an estimate, open to discussion.
+- **Alcohol Level base rates**: banded from L/capita figures above into `{Non-Drinker, Light, Moderate, Heavy}` — banding thresholds are an estimate, open to discussion. (Labeled "Non-Drinker" rather than "None" — see implementation note below.)
 - **Physical Activity baseline**: Norway skews more active (outdoor culture); others closer to WHO's ~28%-of-adults-insufficiently-active baseline — not yet country-differentiated beyond Norway, open item.
 - **BMI baseline**: shifted per country's obesity rate above.
 
@@ -88,7 +88,7 @@ Occupation has been dropped (see decision log) — Age, Gender, Country are the 
 
 ### Lifestyle
 7. **Smoking Status** — {Never, Former, Light Smoker, Heavy Smoker} (replaces binary Smoker) — intensity matters: smoking dose-response (more cigarettes/day → worse outcomes) is one of the most robustly established findings in epidemiology, so collapsing all current smokers into one bucket would throw away a genuinely important, well-grounded relationship. Exact cigarettes/day threshold splitting Light vs. Heavy (proposed: <10/day vs. ≥10/day) still needs to be pinned down in the algorithm doc.
-8. **Alcohol Level** — {None, Light, Moderate, Heavy} (replaces binary Drinks Alcohol)
+8. **Alcohol Level** — {Non-Drinker, Light, Moderate, Heavy} (replaces binary Drinks Alcohol)
 9. **Physical Activity Level** — {Sedentary, Lightly Active, Moderately Active, Very Active} (standard 4-tier activity classification; replaces noisy 0-15 numeric) — driven by Age, Country, Stress
 10. **Sleep Hours** — float
 11. **Sleep Quality** — {Poor, Fair, Good, Excellent} — rebuilt from Sleep Hours + Caffeine (esp. late-day) + Stress + Smoking + Alcohol + Age
@@ -97,7 +97,7 @@ Occupation has been dropped (see decision log) — Age, Gender, Country are the 
 ### Physiology
 13. **BMI** — float, country-shifted baseline
 14. **Heart Rate** — float, linked to Physical Activity/Smoking/Stress
-15. **Health Issues** — {None, Mild, Moderate, Severe} — chronic condition indicator, strengthened links to Age, BMI, Smoking
+15. **Health Issues** — {No Issues, Mild, Moderate, Severe} — chronic condition indicator, strengthened links to Age, BMI, Smoking. (Labeled "No Issues" rather than "None" — pandas silently treats the literal string "None" as missing data on CSV read, which would have collided with the deliberate missing-value injection; see `DATA_GENERATION_ALGORITHM.md`'s Implementation Findings.)
 
 ### Target
 16. **SelfRatedHealth** — {Poor, Fair, Good, Very Good, Excellent} — see Target Variable section above
@@ -119,12 +119,10 @@ This whole section is a placeholder for discussion, not a decision — flagging 
 
 ## Open Questions
 
-- [ ] Light/Heavy smoker cigarettes-per-day threshold — proposed <10/day vs. ≥10/day, needs sign-off
-- [ ] Never/Former/Light/Heavy smoker split per country — estimate acceptable, or worth deeper research?
-- [ ] Alcohol Level banding thresholds from L/capita — estimate acceptable, or refine?
-- [ ] Row distribution across countries — equal (~2,500 each) or population-weighted?
-- [ ] Data quality issue rates — placeholder proposal above, needs your sign-off
-- [ ] Exact target-variable weight formula — to be tuned once first-pass generation + validation exists (mirrors online-gaming's iterative b↔c loop)
+All resolved for the first generated version — see `DATA_GENERATION_ALGORITHM.md` for exact parameters and `generate_dataset.py`/`validate_dataset.py` for implementation. Remaining items are refinements, not blockers:
+
+- [ ] Never/Former/Light/Heavy smoker split and Alcohol Level banding are still estimates (documented as such in the algorithm doc) rather than sourced — worth deeper research if you want tighter grounding, otherwise fine to leave as reasoned assumptions
+- [ ] Manual review of `generated_coffee_health_dataset.csv` — automated validation (`validate_dataset.py`) passes; this is the "your manual check" step per the process doc
 
 ## Notes & Decisions Log
 
@@ -138,3 +136,4 @@ This whole section is a placeholder for discussion, not a decision — flagging 
 - **2026-07-21**: UK self-rated health baseline (~65%) set by extrapolation from its obesity/smoking mix rather than a sourced statistic, since none was confidently found — flagged in the Country Profiles table rather than presented as fact.
 - **2026-07-21**: Smoking Status expanded to {Never, Former, Light Smoker, Heavy Smoker} — collapsing intensity would have discarded a well-established dose-response relationship.
 - **2026-07-21**: Occupation dropped entirely. Unlike Country/Age/BMI/Smoking, its inclusion wasn't backed by researched statistics in this session (only general domain plausibility) — and with Age, Gender, Country already anchoring demographics, dropping it simplifies the dataset as requested rather than adding an under-grounded feature. Physical Activity Level and Stress Level, which had used Occupation as an input, now derive from Age/Country/Stress and Age/Country respectively instead.
+- **2026-07-21**: First dataset generated and validated (`generate_dataset.py` → `generated_coffee_health_dataset.csv`, `validate_dataset.py` all checks passing). Two implementation issues found and fixed during validation: (1) Sleep Quality/Health Issues/SelfRatedHealth switched from hand-picked to quantile-based bucketing thresholds after the first attempt came out badly skewed; (2) the category label `"None"` (Health Issues, Alcohol Level) collided with pandas' default NA strings and was silently converted to missing on CSV read — renamed to `"No Issues"` / `"Non-Drinker"`. Full detail in `DATA_GENERATION_ALGORITHM.md`'s "Implementation Findings" section.

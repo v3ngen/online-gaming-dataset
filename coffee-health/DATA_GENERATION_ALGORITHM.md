@@ -1,0 +1,185 @@
+# Data Generation Algorithm — Coffee & Health
+
+Implements `DATA_GENERATION_SPEC.md`. This doc resolves the spec's remaining open items with concrete, reasoned defaults (marked **[assumption]** where not directly sourced) and pins down the exact formulas `generate_dataset.py` implements. Treat the assumptions as tunable — first-pass output gets checked against the targets below via `validate_dataset.py`, and thresholds get adjusted if they're off, same as online-gaming's iterative approach.
+
+**Target**: 10,000 rows, one row per person. **Row distribution**: equal across countries, ~2,500 each (resolves spec open item).
+
+---
+
+## Generation Order & Dependencies
+
+```
+Level 0 (Independent):        ID, Country, Age, Gender
+Level 1 (Country-driven lifestyle): Smoking Status, Alcohol Level, Daily Coffees, Caffeine Intake
+Level 2 (Behavioral):          Stress Level, Physical Activity Level
+Level 3 (Physiology):          BMI, Heart Rate
+Level 4 (Sleep):               Sleep Hours, Sleep Quality
+Level 5 (Chronic health):      Health Issues
+Level 6 (Target):              SelfRatedHealth
+Level 7 (Data quality issues): duplicates, Age anomalies, missing values
+```
+
+---
+
+## Level 0: Demographics
+
+- **Country**: uniform ~2,500 rows each of `{Italy, France, UK, Norway}`.
+- **Age**: `Beta(2, 3)` scaled to 18–75 (working-age skew, long tail to 75).
+- **Gender**: `{Male: 0.48, Female: 0.48, Other: 0.04}`, same across countries — no research grounding found for country-specific gender skew here, so kept flat rather than invented.
+
+## Level 1: Country-Driven Lifestyle
+
+### Smoking Status `{Never, Former, Light Smoker, Heavy Smoker}`
+Current-smoker % is sourced (spec table). Never/Former split and Light/Heavy split within current smokers are **[assumption]**: countries with steeper historical smoking decline are assumed to have more ex-smokers.
+
+| Country | Never | Former | Light Smoker | Heavy Smoker | (Current total) |
+|---|---|---|---|---|---|
+| Norway | 65.8% | 20% | 9.2% | 5.0% | 14.2% |
+| Italy | 58.6% | 18% | 15.2% | 8.2% | 23.4% |
+| France | 50.4% | 15% | 22.5% | 12.1% | 34.6% |
+| UK | 59.5% | 28% | 8.1% | 4.4% | 12.5% |
+
+Light/Heavy split within current smokers: 65%/35% **[assumption]** — right-skewed, reflecting that heavy (pack-a-day+) smoking has declined faster than light/intermittent smoking in most tobacco-control literature.
+
+### Alcohol Level `{Non-Drinker, Light, Moderate, Heavy}`
+Banded from L/capita (spec table: France 10.4 highest → UK 9.7 → Italy 7.7 → Norway ~6 lowest). Banding thresholds are **[assumption]**, ordered consistently with the sourced L/capita ranking. Category is named "Non-Drinker", not "None" — see the "Implementation Finding" note below.
+
+| Country | Non-Drinker | Light | Moderate | Heavy |
+|---|---|---|---|---|
+| Norway | 25% | 40% | 25% | 10% |
+| Italy | 15% | 40% | 35% | 10% |
+| UK | 12% | 28% | 40% | 20% |
+| France | 10% | 30% | 40% | 20% |
+
+### Daily Coffees & Caffeine Intake
+Fixes the original's rigid `cups × 95mg` formula by varying mg/cup per country (brew-culture based) and adding row-level noise.
+
+| Country | Daily Coffees (mean, std) | mg per cup |
+|---|---|---|
+| Norway | 3.2, 1.0 (large mugs, filter coffee) | 110 |
+| Italy | 3.0, 1.1 (small, frequent espresso shots) | 65 |
+| France | 2.4, 0.9 | 80 |
+| UK | 1.8, 0.9 (still tea-influenced, rising) | 70 |
+
+`Daily Coffees = clip(Normal(mean, std), 0, 9)`
+`Caffeine Intake = Daily Coffees × mg_per_cup × Uniform(0.85, 1.15)`, clipped to `[0, 750]`.
+
+## Level 2: Behavioral
+
+### Stress Level `{Low, Medium, High}`
+Country baseline from Happiness Rank 2025 (Norway lowest stress → France highest), then a mild Age adjustment (25–45 "peak career/family load" shifts mass toward Medium/High) **[assumption — Age effect]**.
+
+| Country | Low | Medium | High |
+|---|---|---|---|
+| Norway | 60% | 30% | 10% |
+| Italy | 50% | 35% | 15% |
+| UK | 45% | 35% | 20% |
+| France | 40% | 35% | 25% |
+
+### Physical Activity Level `{Sedentary, Lightly Active, Moderately Active, Very Active}`
+Country baseline (Norway's outdoor culture skews active; UK skews sedentary, consistent with its obesity rate), then reduced by High Stress and by Age > 55 **[assumption — magnitudes]**.
+
+| Country | Sedentary | Lightly Active | Moderately Active | Very Active |
+|---|---|---|---|---|
+| Norway | 15% | 25% | 35% | 25% |
+| Italy | 25% | 30% | 30% | 15% |
+| France | 25% | 32% | 28% | 15% |
+| UK | 30% | 30% | 25% | 15% |
+
+## Level 3: Physiology
+
+### BMI
+`BMI = country_baseline_mean + activity_adjustment + smoking_adjustment + age_adjustment + Normal(0, country_std)`, clipped `[16, 45]`.
+
+- Country baseline (mean, std), set from obesity rate ranking: Norway (25.5, 4.2), Italy (24.0, 3.5), France (25.7, 4.3), UK (26.8, 4.8)
+- Activity: Very Active −1.5, Moderately −0.7, Lightly 0, Sedentary +1.0
+- Smoking: Heavy Smoker −0.5 (nicotine appetite suppression — real, documented effect), others 0
+- Age: `+0.03 × min(age, 60)` (BMI creeps up with age, plateaus after 60)
+
+### Heart Rate
+`HeartRate = 72 + activity_adj + smoking_adj + stress_adj + age_adj + Normal(0, 7)`, clipped `[45, 110]`.
+
+- Activity: Very Active −6, Moderately −3, Lightly 0, Sedentary +3 (fitness lowers resting HR — well established)
+- Smoking: Heavy +6, Light +3, Former +1, Never 0
+- Stress: High +4, Medium +2, Low 0
+- Age: `+0.05 × age`
+
+## Level 4: Sleep
+
+### Sleep Hours
+`SleepHours = 7.0 − stress_adj − caffeine_adj + Normal(0, 1.0)`, clipped `[3, 10.5]`.
+- Stress: High −0.9, Medium −0.4, Low 0
+- Caffeine: `−0.0015 × CaffeineIntake` (mild — real effect is timing-dependent, which we don't model directly, so kept small)
+
+### Sleep Quality `{Poor, Fair, Good, Excellent}`
+Composite score, not sleep-hours-only (fixes the core original-dataset complaint):
+`score = 40 + 6×(SleepHours − 7) − stress_pen − smoking_pen − alcohol_pen − 0.01×CaffeineIntake + Normal(0, 8)`
+- Stress: High −15, Medium −6, Low 0
+- Smoking: Heavy −8, Light −4, Former −1, Never 0
+- Alcohol: Heavy −10, Moderate −4, Light −1, None 0 (alcohol disrupts sleep architecture — well documented)
+
+Bucketed via **quantile thresholds** (see note below) targeting: Poor 10%, Fair 25%, Good 45%, Excellent 20%.
+
+## Level 5: Health Issues `{No Issues, Mild, Moderate, Severe}`
+
+Replaces the original's broken behavior where "None" was never actually assigned (everyone non-missing had some issue — missingness was silently standing in for "none"). Category is named **"No Issues"**, not "None" — see the "Implementation Finding" note below on why the literal string "None" is unsafe to use as a category value. Composite score:
+`score = 15 + 0.5×max(0, age−30) + 1.2×max(0, |BMI−22|−3) + smoking_pen + Normal(0, 10)`
+- Smoking: Heavy +12, Light +5, Former +2, Never 0
+
+Bucketed via **quantile thresholds** (see note below) targeting: No Issues 55%, Mild 30%, Moderate 11%, Severe 4%.
+
+## Level 6: Target — SelfRatedHealth
+
+`{Poor, Fair, Good, Very Good, Excellent}`, composite score 0–100:
+
+```
+score = 60
+  + country_offset          # calibrated below to hit sourced/extrapolated "good+" rates
+  + gender_offset           # Female -3, Male 0, Other 0  [gender-health paradox]
+  - 0.15 × max(0, age - 30)
+  + activity_bonus          # Sedentary -8, Lightly -2, Moderately +5, Very Active +12
+  - bmi_penalty             # 1.2 × max(0, |BMI-22| - 3)
+  + sleep_quality_bonus     # Poor -12, Fair -4, Good +5, Excellent +12
+  - smoking_penalty         # Former -3, Light -8, Heavy -18
+  - stress_penalty          # Medium -6, High -14
+  - health_issues_penalty   # Mild -10, Moderate -25, Severe -45
+  + Normal(0, 8)
+```
+
+**Country offsets, tuned by validation**: Norway −1.0, Italy −1.75, France +1.25, UK −3.35. These look counter-intuitive at first (Norway's offset is lower than France's, despite Norway's much higher target) — that's because most of the country-level separation is already produced *indirectly*, through Norway/Italy's better smoking/activity/stress profiles pulling their scores up before any direct offset is applied. The direct offset is the *residual* adjustment on top of that, not the whole country effect — see the Implementation Findings note below for how these were derived.
+
+Bucketed via **quantile thresholds** (see note below) targeting: Poor 8%, Fair 17%, Good 40%, Very Good 25%, Excellent 10% (population-level "good or better" ≈ 75%, close to the ~72% average of the four country targets — per-country rates then vary around that due to the offsets above).
+
+**Achieved after calibration** (validate_dataset.py, seed 42): Norway 82.5% (target 80.0%, +2.5pp), Italy 78.7% (75.5%, +3.2pp), France 70.5% (68.5%, +2.0pp), UK 68.2% (65.0%, +3.2pp) — all within the ±5pp tolerance.
+
+### Implementation Findings (from the generate→validate loop)
+
+Two issues surfaced during the first validation pass and were fixed rather than left as spec deviations:
+
+1. **Quantile thresholds instead of hand-picked cut points.** The first attempt used fixed score thresholds (e.g. `<35` Poor, `35-55` Fair, ...) chosen by hand-estimating the weighted formula's average value. That estimate was off (Sleep Quality came out 78% "Poor"), because it's hard to correctly predict where a multi-term weighted sum centers by inspection. Fix: compute thresholds as `np.quantile(score, [cumulative target proportions])` at generation time — this guarantees the marginal distribution hits the target shape regardless of the formula's actual scale, and is the more reliable approach in general.
+2. **"None" collides with pandas' default NA strings.** `Health Issues` and `Alcohol Level` originally used the category label `"None"`. On `pd.read_csv()`, pandas' default `na_values` list treats the literal string `"None"` as missing data — so every genuinely-generated "no issues"/"no alcohol" row silently became NaN on load, both erasing the category and wildly inflating the apparent missing-value rate (Health Issues showed ~39% "missing" against an intended ~10%). Fixed by renaming to `"No Issues"` and `"Non-Drinker"`, which don't collide with any pandas NA sentinel. Worth remembering for any future dataset in this repo — avoid `None`/`NA`/`NULL`/`n/a` etc. as literal category values.
+
+The country-offset calibration itself was done by generating the dataset once, checking `validate_dataset.py`'s per-country "good or better" rates against spec targets, then solving for the offset adjustment needed (using the quantile of each country's pre-offset score distribution against the global threshold) rather than guessing-and-checking blindly — same generate→validate→refine loop the process doc describes, just done analytically instead of by trial and error.
+
+---
+
+## Data Quality Issues (resolves spec open item)
+
+- **Duplicate rows**: 0.4% (~40 rows), exact copies — consistent with online-gaming's rate for cross-project familiarity.
+- **Age anomalies**: ~0.7% typo-style doubled-digit errors (e.g. 34 → 344), same mechanism as online-gaming, capped at 199.
+- **Feature-level missing**: `Sleep Hours` ~8%, `Health Issues` ~10% (both plausible as genuinely under-reported in real health surveys, unlike the original's arbitrary 22.6%/59.8%).
+- **Row-level missing**: 5-10 rows with 4+ missing fields (incomplete records).
+- **Immune fields**: ID, Country, SelfRatedHealth (target).
+
+**Achieved** (seed 42, 10,000 base rows): duplicates 0.40% (40 rows, on target), Age anomalies 0.89% (89 rows — a bit above the ~0.7% intent but within normal sampling variation for a random Bernoulli draw at this rate/n), Sleep Hours missing 8.26%, Health Issues missing 9.84%.
+
+---
+
+## Validation Checks
+
+1. Feature ranges/types match spec
+2. Country/Gender/Smoking/Alcohol/Activity/Stress distributions match target probabilities (±3-5%)
+3. SelfRatedHealth "Good or better" rate per country within ~±5% of spec targets (Norway 80%, Italy 75.5%, France 68.5%, UK 65%)
+4. Key correlations present and correctly signed: BMI↔Activity (negative), HeartRate↔Activity (negative), SleepQuality↔Stress (negative), SelfRatedHealth↔HealthIssues (strong negative)
+5. Logical consistency: Never/Former smokers have no Light/Heavy status; missing-value rates match spec; duplicate count matches spec
+6. No feature is 100% deterministic from another (the original dataset's core flaw)
