@@ -12,11 +12,11 @@ Implements `DATA_GENERATION_SPEC.md`. This doc resolves the spec's remaining ope
 Level 0 (Independent):        ID, Country, Age, Gender
 Level 1 (Country-driven lifestyle): Smoking Status, Alcohol Level, Daily Coffees, Caffeine Intake
 Level 2 (Behavioral):          Stress Level, Physical Activity Level
-Level 3 (Physiology):          BMI, Heart Rate
-Level 4 (Sleep):               Sleep Hours, Sleep Quality
+Level 3 (Physiology):          BMI, Avg Resting Heart Rate
+Level 4 (Sleep):               Avg Sleep Hours Per Night, Sleep Quality
 Level 5 (Chronic health):      Health Issues
 Level 6 (Target):              SelfRatedHealth
-Level 7 (Data quality issues): duplicates, Age anomalies, missing values
+Level 7 (Data quality issues): duplicates, Age/BMI anomalies, demographic-differential missing values
 ```
 
 ---
@@ -62,12 +62,15 @@ Fixes the original's rigid `cups × 95mg` formula by varying mg/cup per country 
 | UK | 1.8, 0.9 (still tea-influenced, rising) | 70 |
 
 `Daily Coffees = clip(Normal(mean, std), 0, 9)`
-`Caffeine Intake = Daily Coffees × mg_per_cup × Uniform(0.85, 1.15)`, clipped to `[0, 750]`.
+
+~10% of people are randomly flagged **decaf/half-caf leaning**: their effective mg/cup is scaled by `Uniform(0.05, 0.30)` instead of 1.0. They still show up as ordinary "Daily Coffees" counts, but with much lower caffeine per cup. This is what gives the Daily Coffees ↔ Caffeine Intake relationship a real, discoverable reason to be strong-but-imperfect (r≈0.75, not r≈1.0) rather than being unexplained multiplicative noise — added after v1 review specifically to answer "why isn't this a perfect correlation?" with a real-world cause instead of a shrug.
+
+`Caffeine Intake = Daily Coffees × effective_mg_per_cup × Uniform(0.85, 1.15)`, clipped to `[0, 750]`.
 
 ## Level 2: Behavioral
 
 ### Stress Level `{Low, Medium, High}`
-Country baseline from Happiness Rank 2025 (Norway lowest stress → France highest), then a mild Age adjustment (25–45 "peak career/family load" shifts mass toward Medium/High) **[assumption — Age effect]**.
+Country baseline from Happiness Rank 2025 (Norway lowest stress → France highest), then a mild Age adjustment (25–45 "peak career/family load" shifts mass toward Medium/High) **[assumption — Age effect]**. Measurement source is deliberately ambiguous, matching real life: could be self-evaluated or pulled from an activity tracker/wearable's stress score — that ambiguity is why it's plausible for this field to go missing (see Data Quality Issues).
 
 | Country | Low | Medium | High |
 |---|---|---|---|
@@ -96,7 +99,7 @@ Country baseline (Norway's outdoor culture skews active; UK skews sedentary, con
 - Smoking: Heavy Smoker −0.5 (nicotine appetite suppression — real, documented effect), others 0
 - Age: `+0.03 × min(age, 60)` (BMI creeps up with age, plateaus after 60)
 
-### Heart Rate
+### Avg Resting Heart Rate
 `HeartRate = 72 + activity_adj + smoking_adj + stress_adj + age_adj + Normal(0, 7)`, clipped `[45, 110]`.
 
 - Activity: Very Active −6, Moderately −3, Lightly 0, Sedentary +3 (fitness lowers resting HR — well established)
@@ -104,12 +107,16 @@ Country baseline (Norway's outdoor culture skews active; UK skews sedentary, con
 - Stress: High +4, Medium +2, Low 0
 - Age: `+0.05 × age`
 
+Named "Avg Resting Heart Rate" (not just "Heart Rate") after v1 review: the plain name didn't make clear this represents a typical/average value from a wearable or clinical measurement rather than a single point-in-time reading — real resting HR varies meaningfully within a day and across measurement devices, which is part of why this field is plausible to go missing (see Data Quality Issues).
+
 ## Level 4: Sleep
 
-### Sleep Hours
+### Avg Sleep Hours Per Night
 `SleepHours = 7.0 − stress_adj − caffeine_adj + Normal(0, 1.0)`, clipped `[3, 10.5]`.
 - Stress: High −0.9, Medium −0.4, Low 0
 - Caffeine: `−0.0015 × CaffeineIntake` (mild — real effect is timing-dependent, which we don't model directly, so kept small)
+
+Named "Avg Sleep Hours Per Night" (not just "Sleep Hours") after v1 review, for the same reason as Avg Resting Heart Rate: makes explicit this is a typical/average value (self-reported or wearable-aggregated), not a single night's reading.
 
 ### Sleep Quality `{Poor, Fair, Good, Excellent}`
 Composite score, not sleep-hours-only (fixes the core original-dataset complaint):
@@ -163,23 +170,27 @@ The country-offset calibration itself was done by generating the dataset once, c
 
 ---
 
-## Data Quality Issues (resolves spec open item)
+## Data Quality Issues (resolves spec open item; revised after v1 review)
 
 - **Duplicate rows**: 0.4% (~40 rows), exact copies — consistent with online-gaming's rate for cross-project familiarity.
-- **Age anomalies**: ~0.7% typo-style doubled-digit errors (e.g. 34 → 344), same mechanism as online-gaming, capped at 199.
-- **Feature-level missing**: `Sleep Hours` ~8%, `Health Issues` ~10% (both plausible as genuinely under-reported in real health surveys, unlike the original's arbitrary 22.6%/59.8%).
+- **Age anomalies**: ~0.7% typo-style doubled-digit errors (e.g. 34 → 344). **Cap changed from 199 to 999 after v1 review**: with the old cap, almost every anomaly landed on exactly 199 (since doubling the last digit of any age ≥20 already exceeds 199), destroying the "reason about what happened" property the anomaly is supposed to teach. For our 18-75 range the doubled value never exceeds 755, so the 999 cap never actually binds — every anomaly is now exactly invertible by stripping the trailing digit.
+- **BMI anomalies**: ~0.6% typo-style missed/misplaced decimal point (e.g. 24.5 → 245). **Added after v1 review** so Age isn't the only field with anomalies. Detect via `BMI > 60`; recover via `/10`. Note: even at this low a rate, these outliers meaningfully distort the raw BMI↔Activity Pearson correlation (see Validation Checks below) — real outlier sensitivity, worth keeping in the dataset as a lesson rather than "fixing" away.
+- **Feature-level missing, demographic-differential** (redesigned after v1 review — previously flat/uniform, which gave nothing for students/reviewer to find when slicing by demographics):
+  - `Avg Sleep Hours Per Night` (base 7%), `Avg Resting Heart Rate` (base 6%), `Stress Level` (base 5%) — all scale with an age-band multiplier (`age_missingness_multiplier` in `generate_dataset.py`): 0.5× under 30, 0.9× 30-44, 1.4× 45-59, 2.1× 60+. Rationale: older people are less likely to own/use a wearable or app that auto-logs these, so device/self-report fields go missing more as age increases.
+  - `Health Issues`: flat ~10% (not device-sourced, so no demographic differential).
 - **Row-level missing**: 5-10 rows with 4+ missing fields (incomplete records).
 - **Immune fields**: ID, Country, SelfRatedHealth (target).
 
-**Achieved** (seed 42, 10,000 base rows): duplicates 0.40% (40 rows, on target), Age anomalies 0.89% (89 rows — a bit above the ~0.7% intent but within normal sampling variation for a random Bernoulli draw at this rate/n), Sleep Hours missing 8.26%, Health Issues missing 9.84%.
+**Achieved** (seed 42, 10,000 base rows): duplicates 0.40% (40 rows, on target); Age anomalies 0.72%, BMI anomalies 0.56%; missingness by age band (Sleep / Heart Rate / Stress): 18-29 → 3.5% / 2.7% / 3.1%, 30-44 → 6.4% / 5.2% / 4.4%, 45-59 → 9.6% / 7.9% / 6.9%, 60+ → 15.2% / 12.7% / 10.2% — clearly monotonic with age, as intended; Health Issues missing 10.4%.
 
 ---
 
 ## Validation Checks
 
-1. Feature ranges/types match spec
+1. Feature ranges/types match spec (Age/BMI range checks allow for anomaly-inclusive upper bounds)
 2. Country/Gender/Smoking/Alcohol/Activity/Stress distributions match target probabilities (±3-5%)
 3. SelfRatedHealth "Good or better" rate per country within ~±5% of spec targets (Norway 80%, Italy 75.5%, France 68.5%, UK 65%)
-4. Key correlations present and correctly signed: BMI↔Activity (negative), HeartRate↔Activity (negative), SleepQuality↔Stress (negative), SelfRatedHealth↔HealthIssues (strong negative)
-5. Logical consistency: Never/Former smokers have no Light/Heavy status; missing-value rates match spec; duplicate count matches spec
-6. No feature is 100% deterministic from another (the original dataset's core flaw)
+4. Key correlations present and correctly signed, checked both raw (anomalies included, to see their distorting effect) and with Age/BMI anomalies excluded (to validate the actual underlying relationship): BMI↔Activity (negative), Avg Resting Heart Rate↔Activity (negative), SleepQuality↔Stress (negative), SelfRatedHealth↔HealthIssues (strong negative)
+5. Missingness on Avg Sleep Hours Per Night / Avg Resting Heart Rate / Stress Level increases monotonically across age bands (18-29 < 30-44 < 45-59 < 60+)
+6. Logical consistency: Never/Former smokers have no Light/Heavy status; missing-value rates match spec; duplicate count matches spec
+7. No feature is 100% deterministic from another (the original dataset's core flaw)

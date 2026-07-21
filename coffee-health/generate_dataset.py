@@ -138,8 +138,16 @@ def generate(n_rows: int, seed: int) -> pd.DataFrame:
     cups_std = df['Country'].map(lambda c: COFFEE_PARAMS[c]['cups_std']).to_numpy()
     mg_per_cup = df['Country'].map(lambda c: COFFEE_PARAMS[c]['mg_per_cup']).to_numpy()
     df['Daily Coffees'] = np.clip(rng.normal(cups_mean, cups_std), 0, 9).round(1)
+
+    # ~10% of people lean decaf/half-caf (still order "coffees", but most cups are
+    # low-caffeine) -- this is what keeps Daily Coffees <-> Caffeine Intake a strong
+    # but imperfect correlation, with a real explanation rather than bare noise.
+    decaf_leaning = rng.random(n) < 0.10
+    decaf_multiplier = np.where(decaf_leaning, rng.uniform(0.05, 0.30, size=n), 1.0)
+    effective_mg_per_cup = mg_per_cup * decaf_multiplier
+
     df['Caffeine Intake'] = np.clip(
-        df['Daily Coffees'] * mg_per_cup * rng.uniform(0.85, 1.15, size=n), 0, 750
+        df['Daily Coffees'] * effective_mg_per_cup * rng.uniform(0.85, 1.15, size=n), 0, 750
     ).round(1)
 
     # Level 2: behavioral
@@ -171,7 +179,7 @@ def generate(n_rows: int, seed: int) -> pd.DataFrame:
     smoking_hr = df['Smoking Status'].map(SMOKING_HR_ADJ).to_numpy()
     stress_hr = df['Stress Level'].map(STRESS_HR_ADJ).to_numpy()
     age_hr = 0.05 * df['Age'].to_numpy()
-    df['Heart Rate'] = np.clip(
+    df['Avg Resting Heart Rate'] = np.clip(
         72 + activity_hr + smoking_hr + stress_hr + age_hr + rng.normal(0, 7, size=n),
         45, 110
     ).round(0)
@@ -179,7 +187,7 @@ def generate(n_rows: int, seed: int) -> pd.DataFrame:
     # Level 4: sleep
     stress_sleep_hours = df['Stress Level'].map({'Low': 0.0, 'Medium': -0.4, 'High': -0.9}).to_numpy()
     caffeine_sleep_hours = -0.0015 * df['Caffeine Intake'].to_numpy()
-    df['Sleep Hours'] = np.clip(
+    df['Avg Sleep Hours Per Night'] = np.clip(
         7.0 + stress_sleep_hours + caffeine_sleep_hours + rng.normal(0, 1.0, size=n),
         3, 10.5
     ).round(1)
@@ -188,7 +196,7 @@ def generate(n_rows: int, seed: int) -> pd.DataFrame:
     smoking_sleep_q = df['Smoking Status'].map(SMOKING_SLEEP_ADJ).to_numpy()
     alcohol_sleep_q = df['Alcohol Level'].map(ALCOHOL_SLEEP_ADJ).to_numpy()
     sleep_q_score = (
-        40 + 6 * (df['Sleep Hours'].to_numpy() - 7)
+        40 + 6 * (df['Avg Sleep Hours Per Night'].to_numpy() - 7)
         + stress_sleep_q + smoking_sleep_q + alcohol_sleep_q
         - 0.01 * df['Caffeine Intake'].to_numpy()
         + rng.normal(0, 8, size=n)
@@ -236,13 +244,39 @@ def generate(n_rows: int, seed: int) -> pd.DataFrame:
     return df
 
 
+def age_missingness_multiplier(age: np.ndarray) -> np.ndarray:
+    """Older people are less likely to own/use a wearable or app that auto-logs
+    sleep, resting heart rate, or stress -- so those device/self-report fields
+    should go missing more often as age increases. Age bands chosen to match
+    the bands the demo notebook slices missingness by."""
+    return np.select(
+        [age < 30, age < 45, age < 60],
+        [0.5, 0.9, 1.4],
+        default=2.1,
+    )
+
+
 def inject_data_quality_issues(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     df = df.copy()
 
-    # Feature-level missing values
-    for col, rate in [('Sleep Hours', 0.08), ('Health Issues', 0.10)]:
+    # Device/self-report fields: missingness rate scales with age (see
+    # age_missingness_multiplier). Age itself is still fully populated at this
+    # point (anomalies/corruption below haven't run yet), so this is a clean signal.
+    age_mult = age_missingness_multiplier(df['Age'].to_numpy())
+    device_fields = [
+        ('Avg Sleep Hours Per Night', 0.07),
+        ('Avg Resting Heart Rate', 0.06),
+        ('Stress Level', 0.05),
+    ]
+    for col, base_rate in device_fields:
+        rate = np.clip(base_rate * age_mult, 0, 0.35)
         mask = rng.random(len(df)) < rate
         df.loc[mask, col] = np.nan
+
+    # Health Issues: not device-sourced (more like a survey/clinical field), so
+    # this stays a flat rate rather than age-differential.
+    mask = rng.random(len(df)) < 0.10
+    df.loc[mask, 'Health Issues'] = np.nan
 
     # Row-level incomplete records (5-10 rows, 4+ missing fields each)
     immune = {'ID', 'Country', 'SelfRatedHealth'}
@@ -254,12 +288,23 @@ def inject_data_quality_issues(df: pd.DataFrame, rng: np.random.Generator) -> pd
         cols_to_null = rng.choice(mutable_cols, size=n_missing, replace=False)
         df.loc[row_idx, cols_to_null] = np.nan
 
-    # Age typo-style anomalies (~0.7%)
+    # Age typo-style anomalies (~0.7%): a digit gets doubled during entry
+    # (e.g. 34 -> 344). No collapsing cap here -- for our 18-75 age range the
+    # doubled value never exceeds 755, so stripping the trailing digit always
+    # recovers the exact original age. A student can reason "344 -> drop the
+    # last digit -> 34" and actually be right, rather than everything collapsing
+    # to one sentinel value.
     anomaly_mask = rng.random(len(df)) < 0.007
     ages = df.loc[anomaly_mask, 'Age']
     df.loc[anomaly_mask, 'Age'] = ages.apply(
-        lambda a: min(199, int(f'{int(a)}{str(int(a))[-1]}')) if pd.notna(a) else a
+        lambda a: min(999, int(f'{int(a)}{str(int(a))[-1]}')) if pd.notna(a) else a
     )
+
+    # BMI typo-style anomalies (~0.6%): a missed/misplaced decimal point during
+    # entry (e.g. 24.5 -> 245). Same "reasoned, not sentinel" property as Age:
+    # dividing by 10 recovers the original value exactly.
+    bmi_anomaly_mask = rng.random(len(df)) < 0.006
+    df.loc[bmi_anomaly_mask, 'BMI'] = (df.loc[bmi_anomaly_mask, 'BMI'] * 10).round(1)
 
     # Duplicate rows (~0.4%)
     n_dupes = int(round(len(df) * 0.004))

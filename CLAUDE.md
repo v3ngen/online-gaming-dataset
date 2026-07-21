@@ -37,6 +37,11 @@ Synthetic online gaming behavior dataset, ~10,000 player-game combination rows a
 - Design goals achieved: logical correlations (e.g. PlayTimeHours ↔ PlayerLevel), demographic influences on genre/spending preferences, multi-factorial (non-deterministic) target variables, and intentional data quality issues (duplicates, age-typo anomalies, missing values) for teaching data cleaning
 - Full detail: `online-gaming/README.md`, `online-gaming/DATA_GENERATION_SPEC.md`, `online-gaming/DATA_GENERATION_ALGORITHM.md`
 
-### coffee-health/ (in progress)
+### coffee-health/ (first version complete, pending manual review)
 
-New dataset on coffee consumption and health outcomes. Only the original source data has been added so far (`coffee-health/data/coffee_health_original.csv`, ~10,000 rows, and `coffee-health/data/coffee_health_README.docx` describing it) — the limitations analysis, spec, generation scripts, and notebook are still to be built following the process above.
+Synthetic coffee consumption / lifestyle / self-rated health dataset, 10,040 rows (10,000 people + intentional duplicates) across Italy, France, UK, and Norway, improving on a modified Kaggle "Global Coffee Health Dataset" whose features had no meaningful correlations (e.g. Sleep Quality was purely a function of Sleep Hours, Stress Level was a 100% deterministic relabeling of Sleep Quality).
+
+- Original dataset: `coffee-health/data/coffee_health_original.csv`; limitations quantified in `coffee-health/analyze_original_dataset.py`
+- Single target: `SelfRatedHealth` {Poor, Fair, Good, Very Good, Excellent} — a real public-health survey construct, built as a multi-factor composite (Health Issues, BMI, Sleep Quality, Physical Activity, Smoking, Stress, Age, Country, Gender), calibrated against sourced country-level statistics
+- Full detail: `coffee-health/README.md`, `coffee-health/DATA_GENERATION_SPEC.md`, `coffee-health/DATA_GENERATION_ALGORITHM.md`
+- Spec, `generate_dataset.py` + `validate_dataset.py` (all checks passing) are done. `dataset_validation.ipynb` is an **instructor-only validation notebook** (not the student-facing step-d deliverable) — executes cleanly end-to-end, ~65% RF accuracy on the 5-class target, confirms all the intentional data quality issues and EDA patterns behave as designed. The actual student-facing analysis notebook (mirroring online-gaming's `analysis_demo.ipynb` role) is still to be built, after the user's manual review of this validation pass.

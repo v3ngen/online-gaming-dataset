@@ -43,10 +43,10 @@ def main():
 
     print('\n--- Range checks ---')
     checks = [
-        ('Age', 13, 199),  # includes typo anomalies up to 199
-        ('BMI', 16, 45),
-        ('Heart Rate', 45, 110),
-        ('Sleep Hours', 3, 10.5),
+        ('Age', 13, 999),  # includes typo anomalies (doubled trailing digit, e.g. 34 -> 344)
+        ('BMI', 16, 450),  # includes typo anomalies (missed decimal point, e.g. 24.5 -> 245)
+        ('Avg Resting Heart Rate', 45, 110),
+        ('Avg Sleep Hours Per Night', 3, 10.5),
         ('Daily Coffees', 0, 9),
         ('Caffeine Intake', 0, 750),
     ]
@@ -56,6 +56,8 @@ def main():
         print(f'{col}: [{s.min():.1f}, {s.max():.1f}] within [{lo}, {hi}]? {"OK" if ok else "FAIL"}')
     n_age_anomalies = ((df['Age'] > 100) | (df['Age'] < 13)).sum()
     print(f'Age anomalies (>100 or <13): {n_age_anomalies} ({n_age_anomalies / len(df) * 100:.2f}%)')
+    n_bmi_anomalies = (df['BMI'] > 60).sum()
+    print(f'BMI anomalies (>60): {n_bmi_anomalies} ({n_bmi_anomalies / len(df) * 100:.2f}%)')
 
     print('\n--- Categorical distributions ---')
     for col in ['Country', 'Gender', 'Smoking Status', 'Alcohol Level',
@@ -76,7 +78,9 @@ def main():
         print(f'{country}: achieved {a*100:.1f}%  target {target*100:.1f}%  diff {diff:+.1f}pp  [{flag}]')
 
     print('\n' + '=' * 80)
-    print('KEY CORRELATIONS (expected sign in brackets)')
+    print('KEY CORRELATIONS, RAW (expected sign in brackets)')
+    print('(BMI/Age anomalies deliberately included -- see how much a handful of')
+    print('extreme outliers can distort a correlation coefficient)')
     print('=' * 80)
     df['_activity_ord'] = ordinal(df['Physical Activity Level'], ACTIVITY_ORDER)
     df['_stress_ord'] = ordinal(df['Stress Level'], STRESS_ORDER)
@@ -86,7 +90,7 @@ def main():
 
     pairs = [
         ('BMI', '_activity_ord', 'negative'),
-        ('Heart Rate', '_activity_ord', 'negative'),
+        ('Avg Resting Heart Rate', '_activity_ord', 'negative'),
         ('_sleepq_ord', '_stress_ord', 'negative'),
         ('_srh_ord', '_health_ord', 'negative'),
         ('Daily Coffees', 'Caffeine Intake', 'positive'),
@@ -95,6 +99,24 @@ def main():
         r = df[a].corr(df[b])
         sign_ok = (r < 0) if expected == 'negative' else (r > 0)
         print(f'corr({a}, {b}) = {r:.3f}  expected {expected}  [{"OK" if sign_ok else "FAIL"}]')
+
+    print('\n--- Same correlations, BMI/Age anomalies excluded ---')
+    print('(this is what actually validates the underlying generative relationship)')
+    df_noanom = df[(df['BMI'] <= 60) & (df['Age'] <= 100)]
+    for a, b, expected in pairs:
+        r = df_noanom[a].corr(df_noanom[b])
+        sign_ok = (r < 0) if expected == 'negative' else (r > 0)
+        strength_flag = 'OK' if abs(r) >= 0.15 else 'WEAK'
+        print(f'corr({a}, {b}) = {r:.3f}  expected {expected}  [{"OK" if sign_ok else "FAIL"}, {strength_flag}]')
+
+    print('\n' + '=' * 80)
+    print('DEVICE/SELF-REPORT MISSINGNESS BY AGE BAND')
+    print('(should increase with age -- older users less likely to own a wearable)')
+    print('=' * 80)
+    age_bands = pd.cut(df['Age'], bins=[0, 29, 44, 59, 999], labels=['18-29', '30-44', '45-59', '60+'])
+    device_cols = ['Avg Sleep Hours Per Night', 'Avg Resting Heart Rate', 'Stress Level']
+    missing_by_age = df.groupby(age_bands, observed=True)[device_cols].apply(lambda g: g.isnull().mean() * 100)
+    print(missing_by_age.round(1))
 
     print('\n' + '=' * 80)
     print('LOGICAL CONSISTENCY')

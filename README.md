@@ -34,7 +34,7 @@ Every dataset folder is self-contained: its own README, spec, scripts, `requirem
 | Folder | Status | Topic |
 |---|---|---|
 | [online-gaming/](online-gaming/) | Complete | Online gaming behavior (playtime, engagement, spending) |
-| [coffee-health/](coffee-health/) | In progress | Coffee consumption and health outcomes |
+| [coffee-health/](coffee-health/) | First version complete, pending manual review | Coffee consumption, lifestyle, and self-rated health across Italy/France/UK/Norway |
 
 ## The Process
 
@@ -84,6 +84,8 @@ A Jupyter notebook (see `online-gaming/analysis_demo.ipynb`) that:
 3. Runs EDA: descriptive statistics, distributions, correlation analysis, categorical breakdowns, and relationship/segmentation analysis that surfaces the patterns built into the spec.
 4. Trains ML model(s) with scikit-learn for the target variable(s) defined in the spec, including appropriate handling of categorical encoding, class imbalance, and any data-leakage traps (e.g. features that were used to derive the target must be excluded).
 5. Closes with a findings/insights summary and a list of further exercises for students.
+
+This is the **student-facing** deliverable — don't confuse it with an instructor-only validation pass. It's fine (and often useful, per coffee-health's `dataset_validation.ipynb`) to first build a review notebook covering steps 1-4 for the user's own manual sign-off before the dataset is considered final, then turn that into the actual student notebook once the design is confirmed. If you build one, name it clearly as a review/validation tool and don't add student-facing framing (exercises, "insights for students" language) until it's actually promoted to that role.
 
 ## Adding a new dataset
 
