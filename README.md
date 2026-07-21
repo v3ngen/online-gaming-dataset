@@ -21,7 +21,16 @@ dataset-generation/
 │   ├── generated_gaming_dataset.csv   # Output of generate_dataset.py
 │   └── data/
 │       └── online_gaming_original.csv # Original source dataset (pre-improvement)
-└── coffee-health/                     # Dataset 2 — in progress
+└── coffee-health/                     # Dataset 2 — complete
+    ├── README.md                          # Dataset overview
+    ├── DATA_GENERATION_SPEC.md            # Feature spec, relationships, data quality issues
+    ├── DATA_GENERATION_ALGORITHM.md       # Exact generation algorithm/formulas
+    ├── generate_dataset.py                # Generation script
+    ├── validate_dataset.py                # Validation script
+    ├── analyze_original_dataset.py        # Limitations analysis of the original source dataset
+    ├── dataset_validation.ipynb           # Review notebook (instructor-facing, not student material)
+    ├── requirements.txt
+    ├── generated_coffee_health_dataset.csv # Output of generate_dataset.py
     └── data/
         ├── coffee_health_original.csv
         └── coffee_health_README.docx
@@ -34,7 +43,7 @@ Every dataset folder is self-contained: its own README, spec, scripts, `requirem
 | Folder | Status | Topic |
 |---|---|---|
 | [online-gaming/](online-gaming/) | Complete | Online gaming behavior (playtime, engagement, spending) |
-| [coffee-health/](coffee-health/) | First version complete, pending manual review | Coffee consumption, lifestyle, and self-rated health across Italy/France/UK/Norway |
+| [coffee-health/](coffee-health/) | Complete | Coffee consumption, lifestyle, and self-rated health across Italy/France/UK/Norway |
 
 ## The Process
 
@@ -75,23 +84,23 @@ A spec (once matured through the dialogue) covers:
 
 **This step loops with (b), it doesn't just follow it once.** After the first generation, Claude runs `validate_dataset.py` (and any other checks needed) and should proactively check the output against the spec without being asked — flagging mismatches rather than assuming the spec was hit. Once it looks aligned, that's the signal for you to do a manual check. Mismatches typically send you back to adjusting the spec (or the algorithm/generation logic) and regenerating, so treat b/c as one iterative cycle rather than sequential one-off steps.
 
-### d) EDA + applied ML notebook
+### d) Dataset review notebook
 
-A Jupyter notebook (see `online-gaming/analysis_demo.ipynb`) that:
+A Jupyter notebook — e.g. `dataset_validation.ipynb` (see coffee-health's for the pattern; online-gaming's older `analysis_demo.ipynb` predates this convention) — that:
 
 1. Loads the dataset and does an initial data quality assessment — explicitly surfacing the issues injected in step (b): duplicates, anomalies, missing values.
 2. Cleans the data using the detection/cleaning approach documented in the spec.
 3. Runs EDA: descriptive statistics, distributions, correlation analysis, categorical breakdowns, and relationship/segmentation analysis that surfaces the patterns built into the spec.
 4. Trains ML model(s) with scikit-learn for the target variable(s) defined in the spec, including appropriate handling of categorical encoding, class imbalance, and any data-leakage traps (e.g. features that were used to derive the target must be excluded).
-5. Closes with a findings/insights summary and a list of further exercises for students.
+5. Closes with a findings summary confirming the intentional patterns and data quality issues actually show up as designed.
 
-This is the **student-facing** deliverable — don't confuse it with an instructor-only validation pass. It's fine (and often useful, per coffee-health's `dataset_validation.ipynb`) to first build a review notebook covering steps 1-4 for the user's own manual sign-off before the dataset is considered final, then turn that into the actual student notebook once the design is confirmed. If you build one, name it clearly as a review/validation tool and don't add student-facing framing (exercises, "insights for students" language) until it's actually promoted to that role.
+**Default assumption: this notebook is for the user's own review of the generated dataset, not a student-facing teaching artifact.** Don't add exercises, "for students" framing, or other teaching scaffolding unless the user explicitly asks for a student-facing notebook as its own task — that's a distinct deliverable from dataset validation, not an automatic next step, and shouldn't be assumed or built speculatively.
 
 ## Adding a new dataset
 
 1. Create a new top-level folder (short, kebab/lower-case name matching the topic).
 2. If starting from an existing dataset, drop the source file(s) into `<folder>/data/`.
-3. Work through the process above: limitations analysis (optional) → `DATA_GENERATION_SPEC.md` (and `DATA_GENERATION_ALGORITHM.md` if needed) → `generate_dataset.py` + `validate_dataset.py` → `analysis_demo.ipynb`.
+3. Work through the process above: limitations analysis (optional) → `DATA_GENERATION_SPEC.md` (and `DATA_GENERATION_ALGORITHM.md` if needed) → `generate_dataset.py` + `validate_dataset.py` → review notebook.
 4. Write `<folder>/README.md` summarizing the dataset for students, following `online-gaming/README.md`'s structure (overview, feature list, built-in patterns, data quality issues, ML tasks, usage example).
 5. Add the dataset to the table in this file.
 

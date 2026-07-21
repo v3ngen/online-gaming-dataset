@@ -135,7 +135,7 @@ Run: `python3 validate_dataset.py generated_coffee_health_dataset.csv`
 
 ## Validation Notebook
 
-`dataset_validation.ipynb` is an **instructor-facing review notebook**, not student teaching material — it exists to manually confirm the generated dataset behaves as designed before it's used to build the actual student-facing exercises (a separate, future deliverable). Covers: data quality assessment and cleaning, EDA (distributions, correlations, country comparisons, demographic-sliced missingness, relationship analysis), and Random Forest classification with feature importance and an ordinal-aware error breakdown.
+`dataset_validation.ipynb` is an **instructor-facing review notebook**, not student teaching material — it exists to manually confirm the generated dataset behaves as designed. This is the notebook deliverable for this dataset; no student-facing version is planned. Covers: data quality assessment and cleaning, EDA (distributions, correlations, country comparisons, demographic-sliced missingness, relationship analysis), and Random Forest classification with feature importance and an ordinal-aware error breakdown.
 
 ## Files Included
 
